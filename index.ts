@@ -7,8 +7,9 @@ require('yargs')
     'List items',
     () => {},
     async (args: any) => {
-      await getEvent(args.id)
-      process.exit(0)
+      const result = await getEvent(args.id)
+
+      console.log(result)
     }
   )
   .help()

@@ -1,18 +1,16 @@
 #!/usr/bin/env node
-import { Argv } from "yargs";
+import { getEvent } from './src/scrapers/facebook'
 
-const options = (yargs: Argv) => {
-  yargs.option("id", {
-    describe: "id",
-  });
-};
-
-require("yargs").command(
-  "facebook <action>",
-  "List items",
-  options,
-  async (args: any) => {
-    console.log("faceb");
-    process.exit(0);
-  }
-);
+require('yargs')
+  .command(
+    'fb:event <id>',
+    'List items',
+    () => {},
+    async (args: any) => {
+      await getEvent(args.id)
+      process.exit(0)
+    }
+  )
+  .help()
+  .alias('help', 'h')
+  .strictCommands().argv

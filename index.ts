@@ -13,17 +13,18 @@ require('yargs')
     'Get event info',
     () => {},
     async (args: any) => {
-      let result = await getMeta(args.url)
+      let result
 
-      if (!result) {
-        if (args.url.includes('facebook.com')) {
-          result = await getFacebookEvent(args.url)
-        }
-
-        if (args.url.includes('latindancecalendar.com')) {
-          result = await getLatinDanceCalendarEvent(args.url)
-        }
+      if (args.url.includes('facebook.com')) {
+        result = await getFacebookEvent(args.url)
       }
+
+      if (args.url.includes('latindancecalendar.com')) {
+        result = await getLatinDanceCalendarEvent(args.url)
+      }
+
+      result = result || {}
+      result.meta = await getMeta(args.url)
 
       console.log(result)
     }

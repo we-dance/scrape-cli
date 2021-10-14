@@ -12,17 +12,8 @@ export async function getLatinDanceCalendarEvent(url: string) {
       website: '.outbound.website|href',
       facebook: '.event_link|href',
       startDate: '.value-title|title',
-      meta: 'script[type="application/ld+json"]|json',
     },
   })
-
-  if (result.meta?.startDate) {
-    result.startDate = result.meta?.startDate
-    result.endDate = result.meta?.endDate
-  }
-
-  result.online = false
-  result.source = url
 
   return result
 }

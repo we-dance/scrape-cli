@@ -14,7 +14,6 @@ export async function getFacebookEvent(url: string) {
       date: '#event_time_info td|eq(1)|content',
       address: '.uiGrid td|eq(3)|trim(\nShow Map)',
       tickets: '.uiGrid td|eq(5)|href',
-      meta: 'script[type="application/ld+json"]|json',
     },
   })
 
@@ -25,11 +24,6 @@ export async function getFacebookEvent(url: string) {
     result.endDate = endDate
   }
 
-  if (result.meta?.startDate) {
-    result.startDate = result.meta?.startDate
-    result.endDate = result.meta?.endDate
-  }
-
   delete result.date
 
   result.online = false
@@ -37,8 +31,6 @@ export async function getFacebookEvent(url: string) {
   if (result.address === 'Online Event') {
     result.online = true
   }
-
-  result.source = url
 
   return result
 }

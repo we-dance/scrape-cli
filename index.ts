@@ -15,7 +15,11 @@ require('yargs')
     async (args: any) => {
       let result
 
-      if (args.url.includes('facebook.com')) {
+      if (
+        args.url.includes('facebook.com') ||
+        args.url.includes('fb.me') ||
+        args.url.includes('fb.com')
+      ) {
         result = await getFacebookEvent(args.url)
       }
 

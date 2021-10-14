@@ -1,11 +1,5 @@
-import * as puppeteer from 'puppeteer'
+import { getBrowser } from './puppeteer/browser'
 
-async function getBrowser() {
-  return puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  })
-}
 interface NodeOptions {
   url: string
   mapping: { [field: string]: string }

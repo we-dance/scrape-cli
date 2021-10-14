@@ -3,7 +3,6 @@ import { getPageNodes } from '../scraper'
 export async function getLatinDanceCalendarEvent(url: string) {
   const result = await getPageNodes({
     url,
-    notFound: '',
     mapping: {
       name: '.page-title',
       description: '.see_more',
@@ -14,6 +13,10 @@ export async function getLatinDanceCalendarEvent(url: string) {
       startDate: '.value-title|title',
     },
   })
+
+  result.id = url.split('/').pop()
+  result.website = url
+  result.source = 'latindancecalendar.com'
 
   return result
 }

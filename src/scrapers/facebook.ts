@@ -1,24 +1,41 @@
 import { getPageNodes } from '../scraper'
 
 export async function getFacebookEvent(url: string) {
-  const result = await getPageNodes({
+  let result = await getPageNodes({
     url,
-    before: '[data-testid="cookie-policy-dialog-accept-button"]',
-    notFound: '',
     mapping: {
       name: '[data-testid=event-permalink-event-name]',
       description: '._63ew',
-      cover: '#event_header_primary img|src',
+      image: '#event_header_primary img|src',
       hostLink: '#title_subtitle a|href',
       hostName: '#title_subtitle a',
       date: '#event_time_info td|eq(1)|content',
       address: '.uiGrid td|eq(3)|trim(\nShow Map)',
       tickets: '.uiGrid td|eq(5)|href',
+      meta: 'script[type="application/ld+json"]|json',
     },
   })
 
-  if (result.date) {
-    const [startDate, endDate] = result.date.split(' to ')
+  let alt = result
+
+  if (result.meta) {
+    result = result.meta
+  }
+
+  if (alt.tickets) {
+    result.tickets = alt.tickets
+  }
+
+  if (alt.hostLink) {
+    result.hostLink = alt.hostLink
+  }
+
+  if (alt.hostName) {
+    result.hostName = alt.hostName
+  }
+
+  if (!result.startDate) {
+    const [startDate, endDate] = alt.date.split(' to ')
 
     result.startDate = startDate
     result.endDate = endDate
@@ -28,9 +45,17 @@ export async function getFacebookEvent(url: string) {
 
   result.online = false
 
-  if (result.address === 'Online Event') {
+  if (alt.address === 'Online Event') {
     result.online = true
   }
+
+  result.id = url.split('/').pop()
+
+  result.facebook = result.url
+
+  delete result.url
+
+  result.source = 'facebook.com'
 
   return result
 }

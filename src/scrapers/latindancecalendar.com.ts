@@ -16,8 +16,11 @@ export async function getLatinDanceCalendarEvent(url: string) {
   })
 
   result.id = getUrlContentId(url)
-  result.website = url
   result.source = getUrlProvider(url)
+
+  result.provider = getUrlProvider(url)
+  result.providerId = getUrlContentId(url)
+  result.providerUrl = url
 
   return result
 }

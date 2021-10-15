@@ -11,6 +11,7 @@ import config from './config'
 import { getDocuments } from './src/firebase/database'
 import { finish } from './src/puppeteer/browser'
 import { getEventList } from './src/scraper'
+import { getUrlProvider } from './src/utils/url'
 
 const multibar = new _progress.MultiBar(
   {
@@ -27,6 +28,58 @@ const multibar = new _progress.MultiBar(
     barIncompleteChar: '\u2591',
   }
 )
+
+interface Job {
+  provider: string
+  action: string
+  started: number
+  startedAt: Date
+  finished?: number
+  finishedAt?: Date
+  total?: number
+  processed?: number
+  duration?: string
+  status?: string
+}
+
+let verbose = false
+let job: Job | null = null
+
+function debug(...args: any[]) {
+  if (verbose) {
+    console.log(...args)
+  }
+}
+
+async function jobStart(provider: string, action: string, url: string) {
+  job = {
+    provider,
+    action,
+    started: Date.now(),
+    startedAt: new Date(),
+  }
+}
+
+async function jobFinish(total: number, status: string) {
+  if (!job) {
+    throw new Error('No job started')
+  }
+
+  job.finished = Date.now()
+  job.finishedAt = new Date()
+  job.total = total
+  job.status = status
+
+  const time = job.finished - job.started
+  const seconds = moment.duration(time).seconds()
+  const minutes = moment.duration(time).minutes()
+
+  job.duration = `${minutes}m ${seconds}s`
+
+  await save(`${config.jobsPath}/${job.started}.yml`, job)
+
+  job = null
+}
 
 async function getEventInfo(url: string) {
   let result = null
@@ -55,21 +108,32 @@ async function getEventInfo(url: string) {
 }
 
 require('yargs')
+  .boolean('verbose')
   .boolean('force')
   .boolean('retry')
   .command(
-    'proccess <provider>',
-    'Process events of provider',
+    'update <provider>',
+    'Update information about events of specific provider',
     () => {},
     async (args: any) => {
+      verbose = args.verbose
+
+      await jobStart(args.provider, 'update', args.provider)
+
+      debug(`reading`, `${config.eventsPath}/${args.provider}`)
+
       const events = await readFiles(`${config.eventsPath}/${args.provider}`)
+
+      debug(`events total`, events.length)
+
       const filteredEvents = events.filter(
-        (e: any) =>
-          e.facebook && e.processed === args.force && e.failed === args.retry
+        (e: any) => e.processed === args.force && e.failed === args.retry
       )
 
       let processed = 0
       let total = filteredEvents.length
+
+      debug(`filtered events`, total)
 
       const totalProgress = multibar.create(total, 0, {
         title: 'Downloading events',
@@ -82,37 +146,33 @@ require('yargs')
         try {
           totalProgress.update(processed, { title: event.name })
 
-          const result = await getEventInfo(event.facebook)
+          const result = await getEventInfo(event.facebook || event.providerUrl)
 
           if (!result) {
-            await save(
-              `${config.eventsPath}/${args.provider}/${providerId}.yml`,
-              {
-                ...event,
-                failed: true,
-                failedAt: new Date(),
-                empty: true,
-              }
-            )
-
-            processed++
-            continue
+            throw new Error('No result')
           }
 
-          await save(`${config.eventsPath}/${result.source}/${result.id}.yml`, {
-            ...result,
-            provider,
-            providerId,
-          })
-
           await save(
-            `${config.eventsPath}/${args.provider}/${providerId}.yml`,
+            `${config.eventsPath}/${result.provider}/${result.providerId}.yml`,
             {
-              ...event,
+              ...result,
+              provider,
+              providerId,
               processed: true,
               processedAt: new Date(),
             }
           )
+
+          if (result.provider !== args.provider) {
+            await save(
+              `${config.eventsPath}/${args.provider}/${providerId}.yml`,
+              {
+                ...event,
+                processed: true,
+                processedAt: new Date(),
+              }
+            )
+          }
         } catch (e) {
           const error = (e as any)?.message
 
@@ -135,33 +195,20 @@ require('yargs')
         totalProgress.update(processed)
       }
 
+      await jobFinish(total, 'finished')
       await finish()
     }
   )
   .command(
-    'pull <url>',
-    'Add provider and get event list',
+    'list <url>',
+    'Get list of events from provider',
     () => {},
     async (args: any) => {
-      const started = Date.now()
-      const startedAt = new Date()
+      await jobStart(getUrlProvider(args.url), 'list', args.url)
 
       const result = await getEventList(args.url)
 
-      const finished = Date.now()
-      const finishedAt = new Date()
-
-      await save(`${config.jobsPath}/${started}.yml`, {
-        id: result.id,
-        url: result.url,
-        count: result.count,
-        startedAt,
-        finishedAt,
-        duration: moment
-          .duration((finished - started) / 1000, 'seconds')
-          .humanize(),
-        // duration: moment.duration((finished - started) / 1000, "seconds").format("h [hrs]: m [min]: s [sec]")
-      })
+      await jobFinish(result.count, 'finished')
 
       await save(`${config.providersPath}/${result.id}.yml`, {
         id: result.id,
@@ -172,7 +219,7 @@ require('yargs')
 
       for (const event of result.items) {
         await save(
-          `${config.eventsPath}/latindancecalendar.com/${event.providerId}.yml`,
+          `${config.eventsPath}/${event.provider}/${event.providerId}.yml`,
           event
         )
       }

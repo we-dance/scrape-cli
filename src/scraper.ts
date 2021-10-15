@@ -64,6 +64,8 @@ export async function getPageNodes(options: NodeOptions) {
         return JSON.parse(innerText)
       case 'src':
         return await page.evaluate((e) => e?.getAttribute('src'), element)
+      case 'bool':
+        return !!innerText
       case 'content':
         return await page.evaluate(
           (e) =>

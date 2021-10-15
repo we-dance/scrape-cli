@@ -7,10 +7,18 @@ export async function getMeta(url: string) {
     mapping: {
       name: '[itemprop="name"]',
       description: '[itemprop="description"]',
-      cover: '[itemprop="image"]|src',
-      address: '[itemprop="location"]',
+      image: '[itemprop="image"]|src',
+      venue: '[itemprop="location"] [itemprop="name"]',
+      addressStreet: '[itemprop="location"] [itemprop="streetAddress"]',
+      addressLocality: '[itemprop="location"] [itemprop="addressLocality"]',
+      addressRegion: '[itemprop="location"] [itemprop="addressRegion"]',
+      addressCountry:
+        '[itemprop="location"] [itemprop="addressCountry"]|content',
       startDate: '[itemprop="startDate"]|content',
       endDate: '[itemprop="endDate"]|content',
+      hasOffers: '[itemprop="offers"]|bool',
+      website: '[data-ga-action="contact-web"]|href',
+      facebook: '[data-ga-action="contact-facebook"]|href',
       meta: 'script[type="application/ld+json"]|json',
     },
   })
@@ -24,10 +32,20 @@ export async function getMeta(url: string) {
   if (result?.meta) {
     result = result.meta
     isMeta = true
-    delete result.meta
   }
 
-  result.website = url
+  delete result.meta
+
+  if (result.hasOffers) {
+    result.tickets = url
+  }
+
+  delete result.hasOffers
+
+  if (!result.website) {
+    result.website = url
+  }
+
   result.id = getUrlContentId(url)
   result.providerId = result.id
   result.provider = getUrlProvider(url)

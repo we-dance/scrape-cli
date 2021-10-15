@@ -149,26 +149,17 @@ const mapProvider = (item: any) => {
 }
 
 interface ScraperPlugin {
+  default?: boolean
   name: string
-  urls: string[]
+  patterns: string[]
   items: string
   map?: (item: any) => any
 }
 
-// const plugin1: ScraperPlugin = {
-//   name: 'latindancecalendar.com',
-//   urls: ['latindancecalendar.com'],
-//   items: `[...document.querySelectorAll(".event_table")].map(node => ({
-//     name: node.querySelector('.link').textContent,
-//     providerUrl: node.querySelector('.link').href,
-//     facebook: node.querySelectorAll('td')[3].querySelector('.quicklink')?.href || '',
-//     website: node.querySelectorAll('td')[4].querySelector('.quicklink')?.href || '',
-//   }))`,
-// }
-
-const plugin2: ScraperPlugin = {
-  name: 'goandance.com',
-  urls: ['goandance.com'],
+const plugin1: ScraperPlugin = {
+  default: true,
+  name: 'schema',
+  patterns: ['goandance.com'],
   items: `[...document.querySelectorAll('[itemtype="http://schema.org/Event"]')].map(node => ({
     name: node.querySelector('[itemprop="name"]').textContent?.trim(),
     image: node.querySelector('[itemprop="image"]').src,
@@ -180,6 +171,39 @@ const plugin2: ScraperPlugin = {
   }))`,
 }
 
+const plugin2: ScraperPlugin = {
+  name: 'latindancecalendar.com',
+  patterns: ['latindancecalendar.com'],
+  items: `[...document.querySelectorAll(".event_table")].map(node => ({
+    name: node.querySelector('.link').textContent,
+    providerUrl: node.querySelector('.link').href,
+    facebook: node.querySelectorAll('td')[3].querySelector('.quicklink')?.href || '',
+    website: node.querySelectorAll('td')[4].querySelector('.quicklink')?.href || '',
+  }))`,
+}
+
+const plugins = [plugin1, plugin2]
+
+function getPlugin(url: string): ScraperPlugin {
+  let result = null
+
+  for (const plugin of plugins) {
+    if (plugin.patterns.some((pattern) => url.includes(pattern))) {
+      result = plugin
+    }
+  }
+
+  if (!result) {
+    result = plugins.find((p) => p.default)
+  }
+
+  if (!result) {
+    throw new Error('No default ScraperPlugin')
+  }
+
+  return result
+}
+
 export async function getEventList(url: string) {
   const page = await getPage(url)
 
@@ -188,7 +212,7 @@ export async function getEventList(url: string) {
   result.id = getUrlProvider(url)
   result.url = url
 
-  const plugin = plugin2
+  const plugin = getPlugin(url)
 
   let items = await page.evaluate(plugin.items)
 

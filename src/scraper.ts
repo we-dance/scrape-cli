@@ -1,4 +1,6 @@
-import { getBrowser } from './puppeteer/browser'
+import { getPage } from './puppeteer/browser'
+import { uniqBy } from 'lodash'
+import { getUrlContentId, getUrlProvider, isFacebookEvent } from './utils/url'
 
 interface NodeOptions {
   url: string
@@ -8,8 +10,7 @@ interface NodeOptions {
 }
 
 export async function getPageNodes(options: NodeOptions) {
-  const browser = await getBrowser()
-  const page = await browser.newPage()
+  const page = await getPage(options.url)
 
   async function getElementText(filteredSelector: string) {
     if (!filteredSelector) {
@@ -101,15 +102,11 @@ export async function getPageNodes(options: NodeOptions) {
     return result
   }
 
-  await page.goto(options.url, { waitUntil: 'networkidle0' })
-
   if (options.notFound) {
     const stopElement = await page.$(options.notFound)
 
     if (stopElement) {
-      await browser.close()
-
-      throw new Error('Not Found')
+      return null
     }
   }
 
@@ -119,7 +116,89 @@ export async function getPageNodes(options: NodeOptions) {
 
   const fields = await getFields(options.mapping)
 
-  await browser.close()
+  fields.url = page.url()
 
   return fields
+}
+
+const mapProvider = (item: any) => {
+  let facebook = null
+  let organiserFacebook = null
+
+  const providerId = getUrlContentId(item.providerUrl)
+  const provider = getUrlProvider(item.providerUrl)
+
+  if (item.facebook) {
+    if (!isFacebookEvent(item.facebook)) {
+      organiserFacebook = item.facebook
+    } else {
+      facebook = item.facebook
+    }
+  }
+
+  return {
+    ...item,
+    facebook,
+    organiserFacebook,
+    provider,
+    providerId,
+    addedAt: new Date(),
+  }
+}
+
+interface ScraperPlugin {
+  name: string
+  urls: string[]
+  items: string
+  map?: (item: any) => any
+}
+
+// const plugin1: ScraperPlugin = {
+//   name: 'latindancecalendar.com',
+//   urls: ['latindancecalendar.com'],
+//   items: `[...document.querySelectorAll(".event_table")].map(node => ({
+//     name: node.querySelector('.link').textContent,
+//     providerUrl: node.querySelector('.link').href,
+//     facebook: node.querySelectorAll('td')[3].querySelector('.quicklink')?.href || '',
+//     website: node.querySelectorAll('td')[4].querySelector('.quicklink')?.href || '',
+//   }))`,
+// }
+
+const plugin2: ScraperPlugin = {
+  name: 'goandance.com',
+  urls: ['goandance.com'],
+  items: `[...document.querySelectorAll('[itemtype="http://schema.org/Event"]')].map(node => ({
+    name: node.querySelector('[itemprop="name"]').textContent?.trim(),
+    image: node.querySelector('[itemprop="image"]').src,
+    startDate: node.querySelector('[itemprop="startDate"]').content,
+    endDate: node.querySelector('[itemprop="endDate"]').content,
+    providerUrl: node.querySelector('[itemprop="url"]').content,
+    locality: node.querySelector('[itemprop="location"]').querySelector('.state').textContent,
+    venue: node.querySelector('[itemprop="location"]').querySelector('[itemprop="name"]').textContent,
+  }))`,
+}
+
+export async function getEventList(url: string) {
+  const page = await getPage(url)
+
+  const result = {} as any
+
+  result.id = getUrlProvider(url)
+  result.url = url
+
+  const plugin = plugin2
+
+  let items = await page.evaluate(plugin.items)
+
+  items = uniqBy(items, 'providerUrl')
+
+  items = items.map(mapProvider)
+  if (typeof plugin?.map === 'function') {
+    items = items.map(plugin.map)
+  }
+
+  result.items = items
+  result.count = items.length
+
+  return result
 }

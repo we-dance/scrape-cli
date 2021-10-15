@@ -1,4 +1,5 @@
 import { getPageNodes } from '../scraper'
+import { getUrlContentId } from '../utils/url'
 
 export async function getFacebookEvent(url: string) {
   let result = await getPageNodes({
@@ -16,10 +17,22 @@ export async function getFacebookEvent(url: string) {
     },
   })
 
+  if (!result) {
+    return null
+  }
+
   let alt = result
 
   if (result.meta) {
     result = result.meta
+    result.parser = 'schema.meta.facebook'
+    delete result.meta
+  } else {
+    result.parser = 'facebook.com'
+  }
+
+  if (alt.image) {
+    result.bigImage = alt.image
   }
 
   if (alt.tickets) {
@@ -34,7 +47,7 @@ export async function getFacebookEvent(url: string) {
     result.hostName = alt.hostName
   }
 
-  if (!result.startDate) {
+  if (!result.startDate && alt.date) {
     const [startDate, endDate] = alt.date.split(' to ')
 
     result.startDate = startDate
@@ -49,13 +62,20 @@ export async function getFacebookEvent(url: string) {
     result.online = true
   }
 
-  result.id = url.split('/').pop()
+  if (result.url) {
+    result.facebook = result.url
+    result.provider = 'facebook.com'
+    result.id = getUrlContentId(result.facebook)
+    result.providerId = result.id
 
-  result.facebook = result.url
-
-  delete result.url
+    delete result.url
+  }
 
   result.source = 'facebook.com'
+
+  if (!result.startDate) {
+    return null
+  }
 
   return result
 }

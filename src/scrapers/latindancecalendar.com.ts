@@ -1,4 +1,5 @@
 import { getPageNodes } from '../scraper'
+import { getUrlContentId, getUrlProvider } from '../utils/url'
 
 export async function getLatinDanceCalendarEvent(url: string) {
   const result = await getPageNodes({
@@ -14,9 +15,9 @@ export async function getLatinDanceCalendarEvent(url: string) {
     },
   })
 
-  result.id = url.split('/').pop()
+  result.id = getUrlContentId(url)
   result.website = url
-  result.source = 'latindancecalendar.com'
+  result.source = getUrlProvider(url)
 
   return result
 }

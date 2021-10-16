@@ -153,10 +153,11 @@ interface ScraperPlugin {
   name: string
   patterns: string[]
   items: string
-  map?: (item: any) => any
+  map?(item: any): any
+  getUrl?(url: string): any
 }
 
-const plugin1: ScraperPlugin = {
+const schemaPlugin: ScraperPlugin = {
   default: true,
   name: 'schema',
   patterns: ['goandance.com'],
@@ -171,7 +172,7 @@ const plugin1: ScraperPlugin = {
   }))`,
 }
 
-const plugin2: ScraperPlugin = {
+const latindancecalendarPlugin: ScraperPlugin = {
   name: 'latindancecalendar.com',
   patterns: ['latindancecalendar.com'],
   items: `[...document.querySelectorAll(".event_table")].map(node => ({
@@ -182,7 +183,40 @@ const plugin2: ScraperPlugin = {
   }))`,
 }
 
-const plugins = [plugin1, plugin2]
+const facebookGroupPlugin: ScraperPlugin = {
+  name: 'facebook.group',
+  patterns: ['facebook.com/groups'],
+  items: `[...document.querySelectorAll('#page a[href*=events]')].map(node => ({
+    name: node.textContent,
+    providerUrl: node.href,
+    facebook: node.href,
+  }))`,
+  getUrl: (url) => {
+    const providerId = getUrlContentId(url)
+    return `https://m.facebook.com/groups/${providerId}?view=events`
+  },
+}
+
+const facebookPagePlugin: ScraperPlugin = {
+  name: 'facebook.page',
+  patterns: ['facebook.com'],
+  items: `[...document.querySelectorAll('#page a[href*=events]')].map(node => ({
+    name: node.textContent,
+    providerUrl: node.href,
+    facebook: node.href,
+  }))`,
+  getUrl: (url) => {
+    const providerId = getUrlContentId(url)
+    return `https://m.facebook.com/${providerId}/events`
+  },
+}
+
+const plugins = [
+  schemaPlugin,
+  latindancecalendarPlugin,
+  facebookGroupPlugin,
+  facebookPagePlugin,
+]
 
 function getPlugin(url: string): ScraperPlugin {
   let result = null
@@ -190,6 +224,7 @@ function getPlugin(url: string): ScraperPlugin {
   for (const plugin of plugins) {
     if (plugin.patterns.some((pattern) => url.includes(pattern))) {
       result = plugin
+      break
     }
   }
 
@@ -201,12 +236,14 @@ function getPlugin(url: string): ScraperPlugin {
     throw new Error('No default ScraperPlugin')
   }
 
+  if (!result.getUrl) {
+    result.getUrl = (url) => url
+  }
+
   return result
 }
 
 export async function getEventList(url: string) {
-  const page = await getPage(url)
-
   const result = {} as any
 
   result.id = getUrlProvider(url)
@@ -214,6 +251,11 @@ export async function getEventList(url: string) {
 
   const plugin = getPlugin(url)
 
+  if (typeof plugin.getUrl !== 'function') {
+    throw new Error('getUrl is not defined')
+  }
+
+  const page = await getPage(plugin.getUrl(url))
   let items = await page.evaluate(plugin.items)
 
   items = uniqBy(items, 'providerUrl')

@@ -13,7 +13,10 @@ export function getUrlContentId(url: string): string {
 }
 
 export function getUrlProvider(url: string): string {
-  return url.split('/')[2].replace(/^www\./, '')
+  return url
+    .split('/')[2]
+    .replace(/^www\./, '')
+    .replace(/^m\./, '')
 }
 
 export function isShort(url: string): boolean {

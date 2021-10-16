@@ -19,6 +19,7 @@
     "firebase-admin": "^10.0.0",
     "fs": "^0.0.1-security",
     "humanize-duration": "^3.27.0",
+    "ical": "^0.8.0",
     "lodash": "^4.17.21",
     "mkdirp": "^1.0.4",
     "moment": "^2.29.1",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@types/cli-progress": "^3.9.1",
+    "@types/ical": "^0.8.0",
     "@types/mkdirp": "^1.0.1",
     "@types/progress": "^2.0.3",
     "@types/puppeteer": "^5.4.2",

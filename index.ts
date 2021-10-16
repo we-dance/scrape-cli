@@ -4,14 +4,19 @@ import * as _progress from 'cli-progress'
 import * as chalk from 'chalk'
 import { getFacebookEvent } from './src/scrapers/facebook'
 import { getLatinDanceCalendarEvent } from './src/scrapers/latindancecalendar.com'
-import { getMeta } from './src/scrapers/schema.org'
+import { getMeta, getMetaEvent } from './src/scrapers/schema.org'
 import { readFiles } from './src/utils/filesystem'
 import save from './src/exporters/yaml'
 import config from './config'
 import { getDocuments } from './src/firebase/database'
 import { finish } from './src/puppeteer/browser'
 import { getEventList } from './src/scraper'
-import { getUrlContentId, getUrlProvider } from './src/utils/url'
+import {
+  getUrlContentId,
+  getUrlProvider,
+  isFacebookEvent,
+} from './src/utils/url'
+import { getEventsFromCalendar } from './src/utils/ical'
 
 const multibar = new _progress.MultiBar(
   {
@@ -129,7 +134,7 @@ async function getEventInfo(url: string) {
 
   if (!result) {
     debug(chalk.gray('Requesting schema...'))
-    result = await getMeta(url)
+    result = await getMetaEvent(url)
   }
 
   if (result) {
@@ -351,6 +356,44 @@ require('yargs')
       for (const profile of profiles) {
         await save(`${config.profilesPath}/accounts/${profile.id}.yml`, profile)
       }
+    }
+  )
+  .command(
+    'ical <url>',
+    'Get events from ical',
+    () => {},
+    async (args: any) => {
+      const events = await getEventsFromCalendar(args.url)
+
+      for (const item of events) {
+        const event: any = { ...item }
+        event.provider = 'ical'
+        event.providerId = item.uid
+        event.addedAt = new Date()
+
+        if (!event.name) {
+          event.name = event.summary
+        }
+
+        if (event.url && isFacebookEvent(event.url)) {
+          event.facebook = event.url
+        }
+
+        await save(
+          `${config.eventsPath}/${event.provider}/${event.providerId}.yml`,
+          event
+        )
+      }
+    }
+  )
+  .command(
+    'meta <url>',
+    'Get meta of url',
+    () => {},
+    async (args: any) => {
+      const meta = await getMeta(args.url)
+
+      console.log(meta)
     }
   )
   .help()

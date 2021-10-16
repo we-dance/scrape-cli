@@ -25,16 +25,26 @@ export async function getMeta(url: string) {
 
   let isMeta = false
 
-  if (!result) {
-    return null
-  }
-
   if (result?.meta) {
     result = result.meta
     isMeta = true
   }
 
   delete result.meta
+
+  if (result) {
+    result.parser = isMeta ? 'schema.meta' : 'schema.html'
+  }
+
+  return result
+}
+
+export async function getMetaEvent(url: string) {
+  let result = await getMeta(url)
+
+  if (!result) {
+    return null
+  }
 
   if (result.hasOffers) {
     result.tickets = url
@@ -49,7 +59,6 @@ export async function getMeta(url: string) {
   result.id = getUrlContentId(url)
   result.providerId = result.id
   result.provider = getUrlProvider(url)
-  result.parser = isMeta ? 'schema.meta' : 'schema.html'
 
   if (!result.startDate) {
     return null

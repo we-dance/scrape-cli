@@ -364,11 +364,15 @@ require('yargs')
     () => {},
     async (args: any) => {
       const events = await getEventsFromCalendar(args.url)
+      const calendarUrl = args.url.replace('/0.ics', '')
+      const providerId = getUrlContentId(calendarUrl)
 
       for (const item of events) {
         const event: any = { ...item }
         event.provider = 'ical'
-        event.providerId = item.uid
+        event.providerId = providerId
+        event.providerEvent = item.uid
+        event.id = item.uid
         event.addedAt = new Date()
 
         if (!event.name) {
@@ -379,8 +383,12 @@ require('yargs')
           event.facebook = event.url
         }
 
+        if (!event.id) {
+          continue
+        }
+
         await save(
-          `${config.eventsPath}/${event.provider}/${event.providerId}.yml`,
+          `${config.eventsPath}/${event.provider}/${event.id}.yml`,
           event
         )
       }

@@ -38,10 +38,5 @@ export async function getPage(url?: string) {
 export async function finish() {
   ;(await getBrowser()).close()
 
-  console.log('')
-  console.log('')
-  console.log('')
-  console.log(`Finished`)
-
   process.exit(0)
 }

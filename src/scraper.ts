@@ -144,7 +144,6 @@ const mapProvider = (item: any) => {
     organiserFacebook,
     provider,
     providerId,
-    addedAt: new Date(),
   }
 }
 
@@ -167,7 +166,10 @@ const schemaPlugin: ScraperPlugin = {
     startDate: node.querySelector('[itemprop="startDate"]').content,
     endDate: node.querySelector('[itemprop="endDate"]').content,
     providerUrl: node.querySelector('[itemprop="url"]').content,
-    locality: node.querySelector('[itemprop="location"]').querySelector('.state').textContent,
+    addressStreet: node.querySelector('[itemprop="location"] [itemprop="streetAddress"]').textContent,
+    addressLocality: node.querySelector('[itemprop="location"] [itemprop="addressLocality"]').textContent,
+    addressRegion: node.querySelector('[itemprop="location"] [itemprop="addressRegion"]').textContent,
+    addressCountry: node.querySelector('[itemprop="location"] [itemprop="addressCountry"]').textContent,
     venue: node.querySelector('[itemprop="location"]').querySelector('[itemprop="name"]').textContent,
   }))`,
 }

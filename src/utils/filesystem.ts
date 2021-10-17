@@ -55,10 +55,22 @@ export function readFiles(pathToFiles: string) {
 
   fs.readdirSync(pathToFiles).forEach((file) => {
     const pathToFile = path.join(pathToFiles, file)
-    const data = readFile(pathToFile)
 
-    properties.push(data)
+    if (fs.lstatSync(pathToFile).isFile()) {
+      const data = readFile(pathToFile)
+      properties.push(data)
+    }
   })
 
   return properties
+}
+
+export function getDirs(pathToDirs: string) {
+  const result: string[] = []
+
+  fs.readdirSync(pathToDirs).forEach((file) => {
+    result.push(file)
+  })
+
+  return result
 }

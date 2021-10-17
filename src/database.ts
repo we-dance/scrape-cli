@@ -15,6 +15,9 @@ export interface DatabaseDriver {
 export interface BeforeUpdateHandler {
   (before: any, after: any): any
 }
+export interface BeforeSaveHandler {
+  (): void
+}
 
 export interface EntityUri {
   (): string
@@ -43,10 +46,12 @@ export class FileDatabaseDriver implements DatabaseDriver {
 }
 
 export class Entity {
+  id?: string
   name?: string
   uri?: EntityUri
   database?: DatabaseDriver
   beforeUpdate?: BeforeUpdateHandler
+  beforeSave?: BeforeSaveHandler
   data: any
   old: any
   diff: any
@@ -116,6 +121,10 @@ export class Entity {
       this.changed = this.diff.length > 0
     } else {
       this.changed = true
+    }
+
+    if (this.beforeSave) {
+      this.beforeSave()
     }
 
     if (this.changed) {

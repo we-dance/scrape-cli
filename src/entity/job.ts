@@ -61,6 +61,7 @@ export class Job extends Entity {
       urls: [],
       logs: [],
     }
+    this.id = this.data.id.toString()
 
     this.database = new FileDatabaseDriver(
       `${config.jobsPath}/${this.data.id}.yml`

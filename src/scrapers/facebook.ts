@@ -64,9 +64,7 @@ export async function getFacebookEvent(url: string) {
 
   if (result.url) {
     result.facebook = result.url
-    result.provider = 'facebook.com'
     result.id = getUrlContentId(result.facebook)
-    result.providerId = result.id
 
     delete result.url
   }

@@ -127,8 +127,8 @@ const mapProvider = (item: any) => {
   let facebook = null
   let organiserFacebook = null
 
-  const providerId = getUrlContentId(item.providerUrl)
-  const provider = getUrlProvider(item.providerUrl)
+  const id = getUrlContentId(item.url)
+  const source = getUrlProvider(item.url)
 
   if (item.facebook) {
     if (!isFacebookEvent(item.facebook)) {
@@ -142,8 +142,8 @@ const mapProvider = (item: any) => {
     ...item,
     facebook,
     organiserFacebook,
-    provider,
-    providerId,
+    id,
+    source,
   }
 }
 
@@ -165,7 +165,7 @@ const schemaPlugin: ScraperPlugin = {
     image: node.querySelector('[itemprop="image"]').src,
     startDate: node.querySelector('[itemprop="startDate"]').content,
     endDate: node.querySelector('[itemprop="endDate"]').content,
-    providerUrl: node.querySelector('[itemprop="url"]').content,
+    url: node.querySelector('[itemprop="url"]').content,
     addressStreet: node.querySelector('[itemprop="location"] [itemprop="streetAddress"]').textContent,
     addressLocality: node.querySelector('[itemprop="location"] [itemprop="addressLocality"]').textContent,
     addressRegion: node.querySelector('[itemprop="location"] [itemprop="addressRegion"]').textContent,
@@ -179,7 +179,7 @@ const latindancecalendarPlugin: ScraperPlugin = {
   patterns: ['latindancecalendar.com'],
   items: `[...document.querySelectorAll(".event_table")].map(node => ({
     name: node.querySelector('.link').textContent,
-    providerUrl: node.querySelector('.link').href,
+    url: node.querySelector('.link').href,
     facebook: node.querySelectorAll('td')[3].querySelector('.quicklink')?.href || '',
     website: node.querySelectorAll('td')[4].querySelector('.quicklink')?.href || '',
   }))`,
@@ -190,12 +190,12 @@ const facebookGroupPlugin: ScraperPlugin = {
   patterns: ['facebook.com/groups'],
   items: `[...document.querySelectorAll('#page a[href*=events]')].map(node => ({
     name: node.textContent,
-    providerUrl: node.href,
+    url: node.href,
     facebook: node.href,
   }))`,
   getUrl: (url) => {
-    const providerId = getUrlContentId(url)
-    return `https://m.facebook.com/groups/${providerId}?view=events`
+    const groupId = getUrlContentId(url)
+    return `https://m.facebook.com/groups/${groupId}?view=events`
   },
 }
 
@@ -204,12 +204,12 @@ const facebookPagePlugin: ScraperPlugin = {
   patterns: ['facebook.com'],
   items: `[...document.querySelectorAll('#page a[href*=events]')].map(node => ({
     name: node.textContent,
-    providerUrl: node.href,
+    url: node.href,
     facebook: node.href,
   }))`,
   getUrl: (url) => {
-    const providerId = getUrlContentId(url)
-    return `https://m.facebook.com/${providerId}/events`
+    const pageId = getUrlContentId(url)
+    return `https://m.facebook.com/${pageId}/events`
   },
 }
 
@@ -260,7 +260,7 @@ export async function getEventList(url: string) {
   const page = await getPage(plugin.getUrl(url))
   let items = await page.evaluate(plugin.items)
 
-  items = uniqBy(items, 'providerUrl')
+  items = uniqBy(items, 'url')
 
   items = items.map(mapProvider)
   if (typeof plugin?.map === 'function') {

@@ -9,6 +9,7 @@ import { finish } from './src/puppeteer/browser'
 import { getUrlContentId, isFacebookEvent } from './src/utils/url'
 import { getEventsFromCalendar } from './src/utils/ical'
 import { add, sync, pull } from './lib'
+import { Provider } from './src/entity/provider'
 
 require('yargs')
   .boolean('verbose')
@@ -29,7 +30,8 @@ require('yargs')
         providers = getDirs(config.eventsPath)
       }
 
-      for (const provider of providers) {
+      for (const item of providers) {
+        const provider = new Provider(item)
         await sync(provider, args.force, args.retry)
       }
 
@@ -50,7 +52,8 @@ require('yargs')
         filteredProviders = providers.filter((p: any) => p.id === args.provider)
       }
 
-      for (const provider of filteredProviders) {
+      for (const item of filteredProviders) {
+        const provider = new Provider(item)
         await pull(provider)
       }
 

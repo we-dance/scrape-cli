@@ -5,10 +5,10 @@ import { getFacebookEvent } from './src/scrapers/facebook'
 import { getLatinDanceCalendarEvent } from './src/scrapers/latindancecalendar.com'
 import { getMetaEvent } from './src/scrapers/schema.org'
 import { readFiles } from './src/utils/filesystem'
-import save from './src/exporters/yaml'
 import { getEventList } from './src/scraper'
 import { Event } from './src/entity/event'
 import { Job, currentJob } from './src/entity/job'
+import { Provider } from './src/entity/provider'
 
 export function debug(...args: any[]) {
   if (currentJob) {
@@ -39,7 +39,6 @@ export async function getEventInfo(url: string) {
   }
 
   if (result) {
-    result.downloadedAt = new Date()
     debug(
       `Downloaded from ${result.provider}: ${result.name} at ${result.startDate} in ${result.addressCountry}`
     )
@@ -67,7 +66,10 @@ export async function add(url: string) {
   await job.finish('finished', 1, 1, 0)
 }
 
-export async function pull(provider: any) {
+export async function pull(provider: Provider) {
+  if (!provider.id) {
+    throw new Error('Provider: not specified')
+  }
   const job = new Job(provider.id, 'pull')
 
   let total = 0
@@ -75,9 +77,9 @@ export async function pull(provider: any) {
   let failed = 0
 
   let processedUrls = 0
-  let totalUrls = provider.urls.length
+  let totalUrls = provider.data.urls.length
 
-  for (const url of provider.urls) {
+  for (const url of provider.data.urls) {
     await job.progress({ total: totalUrls, processed: processedUrls, url })
 
     const result = await getEventList(url)
@@ -92,17 +94,17 @@ export async function pull(provider: any) {
 
   await job.finish('finished', total, processed, failed)
 
-  await save(`${config.providersPath}/${provider.id}.yml`, {
-    id: provider.id,
-    urls: provider.urls,
-    updatedAt: new Date(),
+  await provider.update({
     lastCount: job.data.total,
     lastDuration: job.data.duration,
   })
 }
 
-export async function sync(provider: string, force: boolean, retry: boolean) {
-  const job = new Job(provider, 'sync')
+export async function sync(provider: Provider, force: boolean, retry: boolean) {
+  if (!provider.id) {
+    throw new Error('Provider: not specified')
+  }
+  const job = new Job(provider.id, 'sync')
 
   const events = await readFiles(`${config.eventsPath}/${provider}`)
 
@@ -118,13 +120,15 @@ export async function sync(provider: string, force: boolean, retry: boolean) {
   job.log(`Filtered:`, total)
 
   for (const event of filteredEvents) {
-    const providerId = event.id || event.providerId
-    const provider = event.provider || event.source || 'spreadsheet'
+    const providerId = event.id
+    const provider = event.source
+
+    const sourceEvent = new Event(event)
 
     try {
       job.progress({ total, processed, name: event.name })
 
-      const url = event.facebook || event.providerUrl || event.url
+      const url = event.facebook || event.url || event.providerUrl
       if (!url) {
         throw new Error('No url')
       }
@@ -135,29 +139,21 @@ export async function sync(provider: string, force: boolean, retry: boolean) {
         throw new Error('No result')
       }
 
-      await save(
-        `${config.eventsPath}/${result.provider}/${result.providerId}.yml`,
-        {
-          ...result,
-          provider,
-          providerId,
-          processed: true,
-          processedAt: new Date(),
-        }
-      )
+      const richEvent = new Event(result)
+      richEvent.update({
+        ...result,
+        provider,
+        providerId,
+      })
 
-      if (result.provider !== provider) {
-        await save(`${config.eventsPath}/${provider}/${providerId}.yml`, {
-          ...event,
-          processed: true,
-          processedAt: new Date(),
-        })
-      }
+      sourceEvent.update({
+        processed: true,
+        processedAt: new Date(),
+      })
     } catch (e) {
       const error = (e as any)?.message
 
-      await save(`${config.eventsPath}/${provider}/${providerId}.yml`, {
-        ...event,
+      sourceEvent.update({
         failed: true,
         failedAt: new Date(),
         error,

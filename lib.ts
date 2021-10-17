@@ -121,6 +121,7 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
 
   for (const event of filteredEvents) {
     const providerId = event.id
+    const providerUrl = event.url
     const provider = event.source
 
     const sourceEvent = new Event(event)
@@ -144,6 +145,7 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
         ...result,
         provider,
         providerId,
+        providerUrl,
       })
 
       sourceEvent.update({

@@ -39,9 +39,6 @@ export class Event extends Entity {
 
         if (!this.exists) {
           this.data.createdByJob = currentJob.id
-          //   this.data.provider = currentJob.provider
-          //   this.data.providerId = currentJob.providerId
-          //   this.data.providerUrl = currentJob.providerUrl
         }
       }
     }

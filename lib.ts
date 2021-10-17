@@ -3,7 +3,8 @@ import * as chalk from 'chalk'
 import config from './config'
 import { getFacebookEvent } from './src/scrapers/facebook'
 import { getLatinDanceCalendarEvent } from './src/scrapers/latindancecalendar.com'
-import { getMetaEvent } from './src/scrapers/schema.org'
+import { getEvent as getEventSchemaHtml } from './src/scrapers/schema.html'
+import { getEvent as getEventSchemaMeta } from './src/scrapers/schema.meta'
 import { readFiles } from './src/utils/filesystem'
 import { getEventList } from './src/scraper'
 import { Event } from './src/entity/event'
@@ -19,28 +20,47 @@ export function debug(...args: any[]) {
 export async function getEventInfo(url: string) {
   let result = null
 
+  debug(chalk.gray('Requesting meta schema...'))
+  result = await getEventSchemaMeta(url)
+
+  if (!result) {
+    debug(chalk.gray('Requesting html schema...'))
+    result = await getEventSchemaHtml(url)
+  }
+
   if (
     url.includes('facebook.com') ||
     url.includes('fb.me') ||
     url.includes('fb.com')
   ) {
     debug(chalk.gray('Requesting facebook...'))
-    result = await getFacebookEvent(url)
+    const extra = await getFacebookEvent(url)
+
+    result = {
+      ...result,
+      ...extra,
+    }
   }
 
   if (url.includes('latindancecalendar.com')) {
     debug(chalk.gray('Requesting latindancecalendar...'))
-    result = await getLatinDanceCalendarEvent(url)
-  }
+    const extra = await getLatinDanceCalendarEvent(url)
 
-  if (!result) {
-    debug(chalk.gray('Requesting schema...'))
-    result = await getMetaEvent(url)
+    result = {
+      ...result,
+      ...extra,
+    }
   }
 
   if (result) {
+    if (result.location && result.address) {
+      delete result.address
+    }
+
     debug(
-      `Downloaded from ${result.provider}: ${result.name} at ${result.startDate} in ${result.addressCountry}`
+      `Downloaded from ${result.source}: ${result.name} at ${
+        result.startDate
+      } in ${result.location?.address?.addressCountry || 'Uknown city'}`
     )
   } else {
     debug(chalk.red('Failed'))
@@ -82,21 +102,27 @@ export async function pull(provider: Provider) {
   for (const url of provider.data.urls) {
     await job.progress({ total: totalUrls, processed: processedUrls, url })
 
-    const result = await getEventList(url)
-    total += result.count
-    processedUrls++
+    try {
+      const result = await getEventList(url)
+      total += result.count
+      processedUrls++
 
-    for (const item of result.items) {
-      const event = new Event(item)
-      await event.update(item)
+      for (const item of result.items) {
+        const event = new Event(item)
+        await event.update(item)
+      }
+      processed++
+    } catch (e) {
+      failed++
     }
   }
 
   await job.finish('finished', total, processed, failed)
 
   await provider.update({
-    lastCount: job.data.total,
-    lastDuration: job.data.duration,
+    lastPullCount: job.data.total,
+    lastPullDuration: job.data.duration,
+    pulledAt: new Date(),
   })
 }
 
@@ -106,9 +132,17 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
   }
   const job = new Job(provider.id, 'sync')
 
-  const events = await readFiles(`${config.eventsPath}/${provider}`)
+  const events = await readFiles(
+    `${config.eventsDatabase}/events/${provider.id}`
+  )
 
-  const filteredEvents = events.filter(
+  let filteredEvents = events.filter((e: any) => e.failed === retry)
+
+  if (!force) {
+    filteredEvents = filteredEvents.filter((e: any) => !e.processed)
+  }
+
+  filteredEvents = events.filter(
     (e: any) => e.processed === force && e.failed === retry
   )
 
@@ -116,20 +150,31 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
   let failed = 0
   let total = filteredEvents.length
 
-  job.log(`Total:`, events.length)
-  job.log(`Filtered:`, total)
+  job.log(
+    `Processing ${total} of ${
+      events.length
+    } (force: ${!!force}, retry: ${!!retry})`
+  )
 
   for (const event of filteredEvents) {
-    const providerId = event.id
-    const providerUrl = event.url
-    const provider = event.source
+    event.source = event.source || event.provider
 
-    const sourceEvent = new Event(event)
+    const providerInfo = {
+      providerId: event.id,
+      providerUrl: event.url,
+      provider: event.source,
+    }
+
+    let url = event.facebook || event.url || event.providerUrl
+    if (!url && event.source === 'facebook.com' && event.id) {
+      url = `https://facebook.com/events/${event.id}`
+    }
+
+    const sourceEvent = new Event(event, 'sourceEvent')
+
+    job.progress({ total, processed, name: event.name, url })
 
     try {
-      job.progress({ total, processed, name: event.name })
-
-      const url = event.facebook || event.url || event.providerUrl
       if (!url) {
         throw new Error('No url')
       }
@@ -140,22 +185,24 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
         throw new Error('No result')
       }
 
-      const richEvent = new Event(result)
-      richEvent.update({
+      const richEvent = new Event(result, 'richEvent')
+      await richEvent.update({
         ...result,
-        provider,
-        providerId,
-        providerUrl,
-      })
-
-      sourceEvent.update({
+        ...providerInfo,
         processed: true,
         processedAt: new Date(),
       })
+
+      if (richEvent.data.source !== sourceEvent.data.source) {
+        await sourceEvent.update({
+          processed: true,
+          processedAt: new Date(),
+        })
+      }
     } catch (e) {
       const error = (e as any)?.message
 
-      sourceEvent.update({
+      await sourceEvent.update({
         failed: true,
         failedAt: new Date(),
         error,
@@ -171,4 +218,9 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
   }
 
   await job.finish('finished', total, processed, failed)
+  await provider.update({
+    lastSyncCount: job.data.total,
+    lastSyncDuration: job.data.duration,
+    syncedAt: new Date(),
+  })
 }

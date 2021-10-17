@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as _progress from 'cli-progress'
-import { getMeta } from './src/scrapers/schema.org'
+import { getMeta } from './src/scrapers/schema.html'
 import { getDirs, readFiles } from './src/utils/filesystem'
 import save from './src/exporters/yaml'
 import config from './config'
@@ -10,6 +10,7 @@ import { getUrlContentId, isFacebookEvent } from './src/utils/url'
 import { getEventsFromCalendar } from './src/utils/ical'
 import { add, sync, pull } from './lib'
 import { Provider } from './src/entity/provider'
+import { Event } from './src/entity/event'
 
 require('yargs')
   .boolean('verbose')
@@ -27,11 +28,11 @@ require('yargs')
       if (args.provider) {
         providers = [args.provider]
       } else {
-        providers = getDirs(config.eventsPath)
+        providers = getDirs(`${config.eventsDatabase}/events`)
       }
 
-      for (const item of providers) {
-        const provider = new Provider(item)
+      for (const id of providers) {
+        const provider = new Provider({ id })
         await sync(provider, args.force, args.retry)
       }
 
@@ -45,7 +46,7 @@ require('yargs')
     async (args: any) => {
       config.verbose = args.verbose
 
-      const providers = readFiles(config.providersPath)
+      const providers = readFiles(`${config.eventsDatabase}/providers`)
       let filteredProviders = providers
 
       if (args.provider) {
@@ -80,7 +81,10 @@ require('yargs')
       const events = await getDocuments('events')
 
       for (const event of events) {
-        await save(`${config.eventsPath}/wedance.vip/${event.id}.yml`, event)
+        await save(
+          `${config.eventsDatabase}/events/wedance.vip/${event.id}.yml`,
+          event
+        )
       }
     }
   )
@@ -92,7 +96,10 @@ require('yargs')
       const profiles = await getDocuments('profiles')
 
       for (const profile of profiles) {
-        await save(`${config.profilesPath}/profiles/${profile.id}.yml`, profile)
+        await save(
+          `${config.usersDatabase}/profiles/${profile.id}.yml`,
+          profile
+        )
       }
     }
   )
@@ -104,7 +111,10 @@ require('yargs')
       const profiles = await getDocuments('accounts')
 
       for (const profile of profiles) {
-        await save(`${config.profilesPath}/accounts/${profile.id}.yml`, profile)
+        await save(
+          `${config.usersDatabase}/accounts/${profile.id}.yml`,
+          profile
+        )
       }
     }
   )
@@ -119,11 +129,8 @@ require('yargs')
 
       for (const item of events) {
         const event: any = { ...item }
-        event.provider = 'ical'
-        event.providerId = providerId
-        event.providerEvent = item.uid
+        event.source = `ical_${providerId}`
         event.id = item.uid
-        event.addedAt = new Date()
 
         if (!event.name) {
           event.name = event.summary
@@ -137,10 +144,8 @@ require('yargs')
           continue
         }
 
-        await save(
-          `${config.eventsPath}/${event.provider}/${event.id}.yml`,
-          event
-        )
+        const iCalEvent = new Event(event, 'iCalEvent')
+        await iCalEvent.update(event)
       }
     }
   )

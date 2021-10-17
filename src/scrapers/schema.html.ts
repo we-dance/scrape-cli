@@ -8,7 +8,7 @@ export async function getMeta(url: string) {
       name: '[itemprop="name"]',
       description: '[itemprop="description"]',
       image: '[itemprop="image"]|src',
-      venue: '[itemprop="location"] [itemprop="name"]',
+      locationName: '[itemprop="location"] [itemprop="name"]',
       addressStreet: '[itemprop="location"] [itemprop="streetAddress"]',
       addressLocality: '[itemprop="location"] [itemprop="addressLocality"]',
       addressRegion: '[itemprop="location"] [itemprop="addressRegion"]',
@@ -19,32 +19,40 @@ export async function getMeta(url: string) {
       hasOffers: '[itemprop="offers"]|bool',
       website: '[data-ga-action="contact-web"]|href',
       facebook: '[data-ga-action="contact-facebook"]|href',
-      meta: 'script[type="application/ld+json"]|json',
     },
   })
 
-  let isMeta = false
-
-  if (result?.meta) {
-    result = result.meta
-    isMeta = true
-  }
-
-  delete result.meta
-
   if (result) {
-    result.parser = isMeta ? 'schema.meta' : 'schema.html'
+    result.parser = 'schema.html'
   }
 
   return result
 }
 
-export async function getMetaEvent(url: string) {
+export async function getEvent(url: string) {
   let result = await getMeta(url)
 
   if (!result) {
     return null
   }
+
+  result.location = {
+    address: {
+      addressCountry: result.addressCountry,
+      addressLocality: result.addressLocality,
+      addressRegion: result.addressRegion,
+      streetAddress: result.streetAddress,
+      postalCode: result.postalCode,
+    },
+    name: result.locationName,
+  }
+
+  delete result.addressCountry
+  delete result.addressLocality
+  delete result.addressRegion
+  delete result.streetAddress
+  delete result.postalCode
+  delete result.locationName
 
   if (result.hasOffers) {
     result.tickets = url
@@ -57,8 +65,8 @@ export async function getMetaEvent(url: string) {
   }
 
   result.id = getUrlContentId(url)
-  result.providerId = result.id
-  result.provider = getUrlProvider(url)
+  result.source = getUrlProvider(url)
+  result.url = url
 
   if (!result.startDate) {
     return null

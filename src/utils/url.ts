@@ -1,3 +1,9 @@
+export function getCleanUrl(url: string): string {
+  const result = url.replace(/(\?.*)/, '').replace(/\/?$/, '')
+
+  return result
+}
+
 export function getUrlContentId(url: string): string {
   const result = url
     .replace(/(\?.*)/, '')

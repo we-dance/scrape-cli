@@ -64,7 +64,7 @@ export class Job extends Entity {
     this.id = this.data.id.toString()
 
     this.database = new FileDatabaseDriver(
-      `${config.jobsPath}/${this.data.id}.yml`
+      `${config.eventsDatabase}/jobs/${this.id}.yml`
     )
 
     this.uri = () => `${this.data.id}`
@@ -112,9 +112,10 @@ export class Job extends Entity {
       this.log()
       this.log(
         chalk.green(this.data.action),
+        chalk.yellow(`${processed}/${total}`),
         this.data.provider,
         name || '',
-        url
+        url || ''
       )
     }
   }

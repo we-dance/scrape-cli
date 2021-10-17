@@ -15,6 +15,10 @@ export interface DatabaseDriver {
 export interface BeforeUpdateHandler {
   (before: any, after: any): any
 }
+
+export interface AfterSaveHandler {
+  (): Promise<void>
+}
 export interface BeforeSaveHandler {
   (): void
 }
@@ -52,7 +56,8 @@ export class Entity {
   database?: DatabaseDriver
   beforeUpdate?: BeforeUpdateHandler
   beforeSave?: BeforeSaveHandler
-  data: any
+  afterSave?: AfterSaveHandler
+  data?: any
   old: any
   diff: any
   exists: boolean
@@ -72,7 +77,7 @@ export class Entity {
     if (this.data) {
       this.data = this.database?.read(this.data)
 
-      if (this.data) {
+      if (this.data?.id) {
         this.exists = true
       }
     }
@@ -116,7 +121,7 @@ export class Entity {
 
     this.data = data
 
-    if (this.old) {
+    if (this.exists) {
       this.diff = audit.diff(this.old, this.data)
       this.changed = this.diff.length > 0
     } else {
@@ -131,6 +136,7 @@ export class Entity {
       this.data.updatedAt = new Date()
 
       if (!this.exists) {
+        this.data.id = this.id
         this.data.createdAt = new Date()
       }
 
@@ -144,6 +150,10 @@ export class Entity {
         )
       } else {
         debug(chalk.green(`A ${this.name} ${this.uri()}`))
+      }
+
+      if (this.afterSave) {
+        await this.afterSave()
       }
     } else {
       debug(chalk.gray(`S ${this.name} ${this.uri()}`))

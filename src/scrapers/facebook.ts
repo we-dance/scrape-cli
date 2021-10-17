@@ -8,12 +8,11 @@ export async function getFacebookEvent(url: string) {
       name: '[data-testid=event-permalink-event-name]',
       description: '._63ew',
       image: '#event_header_primary img|src',
-      hostLink: '#title_subtitle a|href',
-      hostName: '#title_subtitle a',
+      organiserFacebook: '#title_subtitle a|href',
+      organiserName: '#title_subtitle a',
       date: '#event_time_info td|eq(1)|content',
       address: '.uiGrid td|eq(3)|trim(\nShow Map)',
       tickets: '.uiGrid td|eq(5)|href',
-      meta: 'script[type="application/ld+json"]|json',
     },
   })
 
@@ -21,34 +20,10 @@ export async function getFacebookEvent(url: string) {
     return null
   }
 
-  let alt = result
+  result.parser = 'facebook.com'
 
-  if (result.meta) {
-    result = result.meta
-    result.parser = 'schema.meta.facebook'
-    delete result.meta
-  } else {
-    result.parser = 'facebook.com'
-  }
-
-  if (alt.image) {
-    result.bigImage = alt.image
-  }
-
-  if (alt.tickets) {
-    result.tickets = alt.tickets
-  }
-
-  if (alt.hostLink) {
-    result.hostLink = alt.hostLink
-  }
-
-  if (alt.hostName) {
-    result.hostName = alt.hostName
-  }
-
-  if (!result.startDate && alt.date) {
-    const [startDate, endDate] = alt.date.split(' to ')
+  if (result.date) {
+    const [startDate, endDate] = result.date.split(' to ')
 
     result.startDate = startDate
     result.endDate = endDate
@@ -58,7 +33,7 @@ export async function getFacebookEvent(url: string) {
 
   result.online = false
 
-  if (alt.address === 'Online Event') {
+  if (result.address === 'Online Event') {
     result.online = true
   }
 

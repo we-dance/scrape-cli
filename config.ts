@@ -1,9 +1,7 @@
 require('dotenv').config()
 
 export default {
-  eventsPath: process.env.PATH_EVENTS || '',
-  providersPath: process.env.PATH_PROVIDERS || '',
-  profilesPath: process.env.PATH_PROFILES || '',
-  jobsPath: process.env.PATH_JOBS || '',
+  eventsDatabase: `${process.env.APP_EVENTS_DATABASE}`,
+  usersDatabase: `${process.env.APP_USER_DATABASE}`,
   verbose: false,
 }

@@ -2,17 +2,17 @@ import { Entity, FileDatabaseDriver } from '../database'
 import config from '../../config'
 import { currentJob } from './job'
 
-export class Provider extends Entity {
+export class Organiser extends Entity {
   constructor(data: any) {
     super()
 
     this.data = data
-    this.id = data?.id
+    this.id = data.id
 
-    this.name = 'provider'
+    this.name = 'organiser'
 
     this.database = new FileDatabaseDriver(
-      `${config.eventsDatabase}/providers/${this.id}.yml`
+      `${config.eventsDatabase}/organisers/${this.id}.yml`
     )
 
     this.uri = () => `${this.id}`

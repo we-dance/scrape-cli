@@ -43,6 +43,10 @@ export class Event extends Entity {
           id: getUrlContentId(this.data.organiserFacebook),
           facebook: getCleanUrl(this.data.organiserFacebook),
           name: this.data.organiserName,
+          createdByEvent: this.data.id,
+          createdBySource: this.data.source,
+          country: this.data.location?.address?.addressCountry,
+          locality: this.data.location?.address?.addressLocality,
         })
       }
     }

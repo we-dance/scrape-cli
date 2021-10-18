@@ -7,29 +7,16 @@ export const plugin: ScraperPlugin = {
   contentType: 'text/calendar',
   patterns: ['www.facebook.com/events/ical/upcoming'],
   getList: async (url: string): Promise<any[]> => {
-    const result = []
-    const events = await getEventsFromCalendar(url)
+    let result = []
+    let events = await getEventsFromCalendar(url)
     const facebookUser = getUrlParam(url, 'uid')
 
-    for (const vevent of events) {
-      if (!vevent.uid) {
-        continue
-      }
-
-      const event: any = {
-        id: getUrlContentId(vevent.url),
-        source: `facebook_ical_${facebookUser}`,
-        name: vevent.summary,
-        description: vevent.description,
-        startDate: vevent.start,
-        endDate: vevent.end,
-        address: vevent.location,
-        url: vevent.url,
-        facebook: vevent.url,
-      }
-
-      result.push(event)
-    }
+    result = events.map((event) => ({
+      ...event,
+      id: getUrlContentId(event.url),
+      source: `facebook_ical_${facebookUser}`,
+      facebook: event.url,
+    }))
 
     return result
   },

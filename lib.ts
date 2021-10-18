@@ -49,6 +49,11 @@ export async function pull(provider: Provider) {
   if (!provider.id) {
     throw new Error('Provider: not specified')
   }
+
+  if (!provider.data.urls) {
+    return
+  }
+
   const job = new Job(provider.id, 'pull')
 
   let total = 0

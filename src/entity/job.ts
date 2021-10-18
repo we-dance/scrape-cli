@@ -109,9 +109,7 @@ export class Job extends Entity {
       console.log(...args)
     }
 
-    if (args.length > 0) {
-      this.data.logs?.push(args.join(' '))
-    }
+    this.data.logs?.push(args.join(' '))
   }
 
   progress({ total, processed, name, url }: JobProgress) {

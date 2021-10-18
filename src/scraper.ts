@@ -3,6 +3,9 @@ import * as glob from 'glob'
 import { uniqBy } from 'lodash'
 import { getPage } from './puppeteer/browser'
 import { getUrlContentId, getUrlProvider, isFacebookEvent } from './utils/url'
+import config from '../config'
+import { debug } from '../lib'
+import chalk = require('chalk')
 
 interface NodeOptions {
   url: string
@@ -221,6 +224,10 @@ export async function parse(url: string, mode: ParseMode = 'mixed') {
     let items = []
 
     if (mode !== 'item' && plugin.getList) {
+      if (config.verbose > 2) {
+        debug(chalk.gray(`request via ${plugin.name}:list`))
+      }
+
       try {
         items = await plugin.getList(url)
         items = uniqBy(items, 'url')
@@ -228,12 +235,16 @@ export async function parse(url: string, mode: ParseMode = 'mixed') {
       } catch (e) {
         items = []
         errors.push({
-          plugin: plugin.name,
+          plugin: `${plugin.name}:list`,
           error: (e as any)?.message,
         })
       }
     }
     if (mode !== 'list' && plugin.getItem) {
+      if (config.verbose > 2) {
+        debug(chalk.gray(`request via ${plugin.name}:item`))
+      }
+
       let item
 
       try {
@@ -248,7 +259,7 @@ export async function parse(url: string, mode: ParseMode = 'mixed') {
         items = []
 
         errors.push({
-          plugin: plugin.name,
+          plugin: `${plugin.name}:item`,
           error: (e as any)?.message,
         })
       }

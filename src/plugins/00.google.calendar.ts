@@ -18,6 +18,8 @@ export const plugin: ScraperPlugin = {
       source: `google_ical_${calendarId}`,
     }))
 
+    console.log('total', result.length)
+
     return result
   },
 }

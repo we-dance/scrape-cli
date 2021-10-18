@@ -1,6 +1,17 @@
 import * as ical from 'ical'
 import axios from 'axios'
 
+function getUrlFromText(text: string): string {
+  const result =
+    text.match(/\bhttps?::\/\/\S+/gi) || text.match(/\bhttps?:\/\/\S+/gi)
+
+  if (result) {
+    return result[0]
+  }
+
+  return ''
+}
+
 export async function getEventsFromCalendar(url: string) {
   const res = await axios(url)
   const events = []
@@ -22,7 +33,7 @@ export async function getEventsFromCalendar(url: string) {
       startDate: vevent.start,
       endDate: vevent.end,
       address: vevent.location,
-      url: vevent.url,
+      url: vevent.url || getUrlFromText(vevent.description || ''),
     }
 
     events.push(event)

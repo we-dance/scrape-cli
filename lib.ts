@@ -13,7 +13,7 @@ export function debug(...args: any[]) {
   }
 }
 
-export async function add(url: string) {
+export async function add(url: string, name?: string) {
   const job = new Job('console', 'add', url)
 
   let total = 0
@@ -32,7 +32,7 @@ export async function add(url: string) {
     processed++
 
     if (result.count) {
-      job.addProvider({ id: result.items[0].source, urls: [url] })
+      job.addProvider({ name, id: result.items[0].source, urls: [url] })
     }
   } catch (e) {
     job.data.error = (e as any)?.message

@@ -6,22 +6,6 @@ import config from '../../config'
 import { Organiser } from './organiser'
 import { Provider } from './provider'
 
-const multibar = new _progress.MultiBar(
-  {
-    clearOnComplete: false,
-    hideCursor: true,
-    stopOnComplete: true,
-    forceRedraw: true,
-  },
-  {
-    format:
-      chalk.white(' {bar}') +
-      ' {percentage}% | ETA: {eta_formatted} | {value}/{total} | {title}',
-    barCompleteChar: '\u2588',
-    barIncompleteChar: '\u2591',
-  }
-)
-
 export interface JobData {
   id: number
   provider: string
@@ -68,6 +52,7 @@ export class Job extends Entity {
       urls: [],
       logs: [],
     }
+    this.id = this.data.id.toString()
 
     this.database = new FileDatabaseDriver(
       `${config.eventsDatabase}/jobs/${this.data.id}.yml`
@@ -81,13 +66,29 @@ export class Job extends Entity {
       this.data.urls?.push(url)
     }
 
-    if (!config.v) {
+    this.log()
+    this.log(chalk.green(action), `from ${provider}`)
+
+    if (!config.verbose) {
+      const multibar = new _progress.MultiBar(
+        {
+          clearOnComplete: false,
+          hideCursor: true,
+          stopOnComplete: true,
+          forceRedraw: true,
+        },
+        {
+          format:
+            chalk.white(' {bar}') +
+            ' {percentage}% | ETA: {eta_formatted} | {value}/{total} | {title}',
+          barCompleteChar: '\u2588',
+          barIncompleteChar: '\u2591',
+        }
+      )
+
       progress = multibar.create(0, 0, {
         title: `${action} ${provider}`,
       })
-    } else {
-      this.log()
-      this.log(chalk.green(action), `from ${provider}`)
     }
   }
 
@@ -104,7 +105,7 @@ export class Job extends Entity {
   }
 
   log(...args: any[]) {
-    if (config.v) {
+    if (config.verbose > 0) {
       console.log(...args)
     }
 
@@ -126,16 +127,14 @@ export class Job extends Entity {
       progress.update(processed, { name })
     }
 
-    if (config.v) {
-      this.log()
-      this.log(
-        chalk.green(this.data.action),
-        chalk.yellow(`${processed}/${total}`),
-        this.data.provider,
-        name || '',
-        url || ''
-      )
-    }
+    this.log()
+    this.log(
+      chalk.green(this.data.action),
+      chalk.yellow(`${processed}/${total}`),
+      this.data.provider,
+      name || '',
+      url || ''
+    )
   }
 
   async finish(

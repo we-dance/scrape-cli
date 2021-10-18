@@ -1,9 +1,9 @@
 require('dotenv').config()
 
-export default {
+const config = {
   eventsDatabase: `${process.env.APP_EVENTS_DATABASE}`,
   usersDatabase: `${process.env.APP_USER_DATABASE}`,
-  v: false,
-  vv: false,
-  vvv: false,
+  verbose: 0,
 }
+
+export default config

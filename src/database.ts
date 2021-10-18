@@ -151,7 +151,7 @@ export class Entity {
           chalk.yellow(changes.join(', '))
         )
 
-        if (config.vvv) {
+        if (config.verbose > 2) {
           for (const change of this.diff) {
             debug(chalk.gray(`${change.key}: ${change.from} -> ${change.to}`))
           }

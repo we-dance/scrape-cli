@@ -1,5 +1,7 @@
-import { getPage } from './puppeteer/browser'
+import axios from 'axios'
+import * as glob from 'glob'
 import { uniqBy } from 'lodash'
+import { getPage } from './puppeteer/browser'
 import { getUrlContentId, getUrlProvider, isFacebookEvent } from './utils/url'
 
 interface NodeOptions {
@@ -87,7 +89,6 @@ export async function getPageNodes(options: NodeOptions) {
             e.querySelector('[href]')?.getAttribute('href'),
           element
         )
-      case 'json':
     }
 
     return null
@@ -123,152 +124,144 @@ export async function getPageNodes(options: NodeOptions) {
   return fields
 }
 
-const mapProvider = (item: any) => {
-  let facebook = null
-  let organiserFacebook = null
+const mapProvider = (parser: string) => {
+  return (item: any) => {
+    let facebook = null
+    let organiserFacebook = null
 
-  const id = getUrlContentId(item.url)
-  const source = getUrlProvider(item.url)
+    const id = item.id || getUrlContentId(item.url)
+    const source = item.source || getUrlProvider(item.url)
 
-  if (item.facebook) {
-    if (!isFacebookEvent(item.facebook)) {
-      organiserFacebook = item.facebook
-    } else {
-      facebook = item.facebook
+    if (item.hasOffers) {
+      item.tickets = item.url
     }
-  }
 
-  return {
-    ...item,
-    facebook,
-    organiserFacebook,
-    id,
-    source,
+    delete item.hasOffers
+
+    if (item.facebook) {
+      if (!isFacebookEvent(item.facebook)) {
+        organiserFacebook = item.facebook
+      } else {
+        facebook = item.facebook
+      }
+    }
+
+    return {
+      ...item,
+      facebook,
+      organiserFacebook,
+      id,
+      source,
+      parser,
+    }
   }
 }
 
-interface ScraperPlugin {
+export interface ScraperPlugin {
   default?: boolean
+  contentType?: string
   name: string
-  patterns: string[]
-  items: string
-  map?(item: any): any
-  getUrl?(url: string): any
+  patterns?: string[]
+  getList?(url: string): Promise<any[]>
+  getItem?(url: string): Promise<any>
 }
 
-const schemaPlugin: ScraperPlugin = {
-  default: true,
-  name: 'schema',
-  patterns: ['goandance.com'],
-  items: `[...document.querySelectorAll('[itemtype="http://schema.org/Event"]')].map(node => ({
-    name: node.querySelector('[itemprop="name"]').textContent?.trim(),
-    image: node.querySelector('[itemprop="image"]').src,
-    startDate: node.querySelector('[itemprop="startDate"]').content,
-    endDate: node.querySelector('[itemprop="endDate"]').content,
-    url: node.querySelector('[itemprop="url"]').content,
-    addressStreet: node.querySelector('[itemprop="location"] [itemprop="streetAddress"]').textContent,
-    addressLocality: node.querySelector('[itemprop="location"] [itemprop="addressLocality"]').textContent,
-    addressRegion: node.querySelector('[itemprop="location"] [itemprop="addressRegion"]').textContent,
-    addressCountry: node.querySelector('[itemprop="location"] [itemprop="addressCountry"]').textContent,
-    venue: node.querySelector('[itemprop="location"]').querySelector('[itemprop="name"]').textContent,
-  }))`,
-}
+async function getPlugins(
+  url: string,
+  contentType: string
+): Promise<ScraperPlugin[]> {
+  const plugins = await loadPlugins()
+  const result = []
 
-const latindancecalendarPlugin: ScraperPlugin = {
-  name: 'latindancecalendar.com',
-  patterns: ['latindancecalendar.com'],
-  items: `[...document.querySelectorAll(".event_table")].map(node => ({
-    name: node.querySelector('.link').textContent,
-    url: node.querySelector('.link').href,
-    facebook: node.querySelectorAll('td')[3].querySelector('.quicklink')?.href || '',
-    website: node.querySelectorAll('td')[4].querySelector('.quicklink')?.href || '',
-  }))`,
-}
-
-const facebookGroupPlugin: ScraperPlugin = {
-  name: 'facebook.group',
-  patterns: ['facebook.com/groups'],
-  items: `[...document.querySelectorAll('#page a[href*=events]')].map(node => ({
-    name: node.textContent,
-    url: node.href,
-    facebook: node.href,
-  }))`,
-  getUrl: (url) => {
-    const groupId = getUrlContentId(url)
-    return `https://m.facebook.com/groups/${groupId}?view=events`
-  },
-}
-
-const facebookPagePlugin: ScraperPlugin = {
-  name: 'facebook.page',
-  patterns: ['facebook.com'],
-  items: `[...document.querySelectorAll('#page a[href*=events]')].map(node => ({
-    name: node.textContent,
-    url: node.href,
-    facebook: node.href,
-  }))`,
-  getUrl: (url) => {
-    const pageId = getUrlContentId(url)
-    return `https://m.facebook.com/${pageId}/events`
-  },
-}
-
-const plugins = [
-  schemaPlugin,
-  latindancecalendarPlugin,
-  facebookGroupPlugin,
-  facebookPagePlugin,
-]
-
-function getPlugin(url: string): ScraperPlugin {
-  let result = null
-
-  for (const plugin of plugins) {
-    if (plugin.patterns.some((pattern) => url.includes(pattern))) {
-      result = plugin
-      break
+  for (const currentPlugin of plugins) {
+    if (
+      (currentPlugin.contentType &&
+        contentType.includes(currentPlugin.contentType)) ||
+      (currentPlugin.patterns &&
+        currentPlugin.patterns.some((pattern) => url.includes(pattern)))
+    ) {
+      result.push(currentPlugin)
     }
-  }
-
-  if (!result) {
-    result = plugins.find((p) => p.default)
-  }
-
-  if (!result) {
-    throw new Error('No default ScraperPlugin')
-  }
-
-  if (!result.getUrl) {
-    result.getUrl = (url) => url
   }
 
   return result
 }
 
-export async function getEventList(url: string) {
+export async function loadPlugins(): Promise<ScraperPlugin[]> {
+  return new Promise((resolve, reject) => {
+    glob(__dirname + '/plugins/*.js', function (err, res) {
+      if (err) {
+        reject(err)
+      } else {
+        Promise.all(
+          res.map((file) => {
+            return import(file.replace(__dirname, '.').replace('.js', ''))
+          })
+        ).then((modules) => {
+          resolve(modules.map((m) => m.plugin))
+        })
+      }
+    })
+  })
+}
+
+type ParseMode = 'mixed' | 'list' | 'item'
+
+export async function parse(url: string, mode: ParseMode = 'mixed') {
+  let allItems = []
+  let scrapers = []
+
+  const res = await axios.head(url)
+
+  const plugins = await getPlugins(url, res.headers['content-type'])
+
+  for (const plugin of plugins) {
+    let items = []
+
+    if (mode !== 'item' && plugin.getList) {
+      try {
+        items = await plugin.getList(url)
+        items = uniqBy(items, 'url')
+        items = items.map(mapProvider(plugin.name))
+      } catch (e) {
+        items = []
+      }
+    }
+    if (mode !== 'list' && plugin.getItem) {
+      let item
+
+      try {
+        await plugin.getItem(url)
+
+        if (item?.startDate) {
+          item = mapProvider(plugin.name)(item)
+
+          items = [item]
+        }
+      } catch (e) {
+        items = []
+      }
+    }
+
+    if (!items) {
+      continue
+    }
+
+    scrapers.push(plugin.name)
+    allItems.push(...items)
+  }
+
+  if (!allItems.length) {
+    throw new Error(`No result with ${scrapers.join(', ')}`)
+  }
+
   const result = {} as any
 
   result.id = getUrlProvider(url)
   result.url = url
-
-  const plugin = getPlugin(url)
-
-  if (typeof plugin.getUrl !== 'function') {
-    throw new Error('getUrl is not defined')
-  }
-
-  const page = await getPage(plugin.getUrl(url))
-  let items = await page.evaluate(plugin.items)
-
-  items = uniqBy(items, 'url')
-
-  items = items.map(mapProvider)
-  if (typeof plugin?.map === 'function') {
-    items = items.map(plugin.map)
-  }
-
-  result.items = items
-  result.count = items.length
+  result.items = allItems
+  result.count = allItems.length
+  result.scrapers = scrapers
 
   return result
 }

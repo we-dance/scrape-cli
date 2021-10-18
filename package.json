@@ -3,7 +3,7 @@
   "scripts": {
     "lint": "tslint --project tsconfig.json",
     "build": "tsc",
-    "cli": "yarn build && node dist/index.js"
+    "cli": "rimraf dist && yarn build && node dist/index.js"
   },
   "bin": {
     "scrape": "dist/index.js"
@@ -19,6 +19,7 @@
     "entity-diff": "^1.0.6",
     "firebase-admin": "^10.0.0",
     "fs": "^0.0.1-security",
+    "glob": "^7.2.0",
     "humanize-duration": "^3.27.0",
     "ical": "^0.8.0",
     "lodash": "^4.17.21",
@@ -26,11 +27,13 @@
     "moment": "^2.29.1",
     "path": "^0.12.7",
     "puppeteer": "^7.0.0",
+    "rimraf": "^3.0.2",
     "yaml": "^1.10.2",
     "yargs": "^16.2.0"
   },
   "devDependencies": {
     "@types/cli-progress": "^3.9.1",
+    "@types/glob": "^7.1.4",
     "@types/ical": "^0.8.0",
     "@types/mkdirp": "^1.0.1",
     "@types/progress": "^2.0.3",

@@ -1,16 +1,12 @@
 #!/usr/bin/env node
 import * as _progress from 'cli-progress'
-import { getMeta } from './src/scrapers/schema.html'
 import { getDirs, readFiles } from './src/utils/filesystem'
 import save from './src/exporters/yaml'
 import config from './config'
 import { getDocuments } from './src/firebase/database'
 import { finish } from './src/puppeteer/browser'
-import { getUrlContentId, isFacebookEvent } from './src/utils/url'
-import { getEventsFromCalendar } from './src/utils/ical'
 import { add, sync, pull } from './lib'
 import { Provider } from './src/entity/provider'
-import { Event } from './src/entity/event'
 
 require('yargs')
   .boolean('verbose')
@@ -116,47 +112,6 @@ require('yargs')
           profile
         )
       }
-    }
-  )
-  .command(
-    'ical <url>',
-    'Get events from ical',
-    () => {},
-    async (args: any) => {
-      const events = await getEventsFromCalendar(args.url)
-      const calendarUrl = args.url.replace('/0.ics', '')
-      const providerId = getUrlContentId(calendarUrl)
-
-      for (const item of events) {
-        const event: any = { ...item }
-        event.source = `ical_${providerId}`
-        event.id = item.uid
-
-        if (!event.name) {
-          event.name = event.summary
-        }
-
-        if (event.url && isFacebookEvent(event.url)) {
-          event.facebook = event.url
-        }
-
-        if (!event.id) {
-          continue
-        }
-
-        const iCalEvent = new Event(event, 'iCalEvent')
-        await iCalEvent.update(event)
-      }
-    }
-  )
-  .command(
-    'meta <url>',
-    'Get meta of url',
-    () => {},
-    async (args: any) => {
-      const meta = await getMeta(args.url)
-
-      console.log(meta)
     }
   )
   .help()

@@ -6,6 +6,7 @@ export async function getEventsFromCalendar(url: string) {
   const events = []
 
   const data = ical.parseICS(res.data)
+
   for (const id in data) {
     events.push(data[id])
   }

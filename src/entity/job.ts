@@ -3,6 +3,8 @@ import * as chalk from 'chalk'
 import * as moment from 'moment'
 import { Entity, FileDatabaseDriver } from '../database'
 import config from '../../config'
+import { Organiser } from './organiser'
+import { Provider } from './provider'
 
 const multibar = new _progress.MultiBar(
   {
@@ -32,6 +34,7 @@ export interface JobData {
   failed?: number
   duration?: string
   status?: string
+  error?: string
   logs?: string[]
 }
 
@@ -47,11 +50,15 @@ let progress: _progress.Bar | null = null
 
 export class Job extends Entity {
   data: JobData
+  organisers: any[]
+  providers: any[]
 
   constructor(provider: string, action: string, url?: string) {
     super()
 
     this.name = 'job'
+    this.organisers = []
+    this.providers = []
 
     this.data = {
       id: Date.now(),
@@ -81,7 +88,19 @@ export class Job extends Entity {
       })
     } else {
       this.log()
-      this.log(chalk.green(action), provider)
+      this.log(chalk.green(action), `from ${provider}`)
+    }
+  }
+
+  addOrganiser(data: any) {
+    if (!this.organisers.find((i) => data.id)) {
+      this.organisers.push(data)
+    }
+  }
+
+  addProvider(data: any) {
+    if (!this.providers.find((i) => data.id)) {
+      this.providers.push(data)
     }
   }
 
@@ -143,12 +162,22 @@ export class Job extends Entity {
 
     this.data.duration = `${minutes}m ${seconds}s`
 
+    for (const item of this.organisers) {
+      const organiser = new Organiser(item)
+      await organiser.update(item)
+    }
+
+    for (const item of this.providers) {
+      const provider = new Provider(item)
+      await provider.update(item)
+    }
+
     await this.save(this.data)
 
     this.log()
     this.log(
       chalk.green(
-        `🎉 ${this.data.status} with ${this.data.total} results in ${this.data.duration}`
+        `🎉 ${this.data.status} with ${this.data.total} items, ${this.organisers.length} organisers, ${this.providers.length} providers in ${this.data.duration}`
       )
     )
 

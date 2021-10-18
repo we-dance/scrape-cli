@@ -1,7 +1,6 @@
 import { Entity, FileDatabaseDriver } from '../database'
 import config from '../../config'
 import { currentJob } from './job'
-import { Organiser } from './organiser'
 import { getCleanUrl, getUrlContentId } from '../utils/url'
 
 export class Event extends Entity {
@@ -12,6 +11,7 @@ export class Event extends Entity {
 
     this.data = data
     this.label = label
+    this.id = data.id
 
     this.name = 'event'
 
@@ -19,7 +19,9 @@ export class Event extends Entity {
       `${config.eventsDatabase}/events/${this.data.source}/${this.data.id}.yml`
     )
 
-    this.uri = () => `${this.data.source} ${this.data.id} (${this.label})`
+    this.uri = () =>
+      `${this.data.source} ${this.data.id}` +
+      (this.label ? ` (${this.label})` : '')
 
     this.beforeUpdate = (before: any, after: any) => {
       const result = after
@@ -32,11 +34,13 @@ export class Event extends Entity {
     }
 
     this.afterSave = async () => {
+      if (!currentJob) {
+        return
+      }
+
       if (this.data.organiserFacebook) {
-        const organiser = new Organiser({
+        currentJob.addOrganiser({
           id: getUrlContentId(this.data.organiserFacebook),
-        })
-        await organiser.update({
           facebook: getCleanUrl(this.data.organiserFacebook),
           name: this.data.organiserName,
         })

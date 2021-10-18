@@ -1,12 +1,8 @@
 import * as _ from 'lodash'
 import * as chalk from 'chalk'
 import config from './config'
-import { getFacebookEvent } from './src/scrapers/facebook'
-import { getLatinDanceCalendarEvent } from './src/scrapers/latindancecalendar.com'
-import { getEvent as getEventSchemaHtml } from './src/scrapers/schema.html'
-import { getEvent as getEventSchemaMeta } from './src/scrapers/schema.meta'
 import { readFiles } from './src/utils/filesystem'
-import { getEventList } from './src/scraper'
+import { parse } from './src/scraper'
 import { Event } from './src/entity/event'
 import { Job, currentJob } from './src/entity/job'
 import { Provider } from './src/entity/provider'
@@ -17,73 +13,36 @@ export function debug(...args: any[]) {
   }
 }
 
-export async function getEventInfo(url: string) {
-  let result = null
-
-  debug(chalk.gray('Requesting meta schema...'))
-  result = await getEventSchemaMeta(url)
-
-  if (!result) {
-    debug(chalk.gray('Requesting html schema...'))
-    result = await getEventSchemaHtml(url)
-  }
-
-  if (
-    url.includes('facebook.com') ||
-    url.includes('fb.me') ||
-    url.includes('fb.com')
-  ) {
-    debug(chalk.gray('Requesting facebook...'))
-    const extra = await getFacebookEvent(url)
-
-    result = {
-      ...result,
-      ...extra,
-    }
-  }
-
-  if (url.includes('latindancecalendar.com')) {
-    debug(chalk.gray('Requesting latindancecalendar...'))
-    const extra = await getLatinDanceCalendarEvent(url)
-
-    result = {
-      ...result,
-      ...extra,
-    }
-  }
-
-  if (result) {
-    if (result.location && result.address) {
-      delete result.address
-    }
-
-    debug(
-      `Downloaded from ${result.source}: ${result.name} at ${
-        result.startDate
-      } in ${result.location?.address?.addressCountry || 'Uknown city'}`
-    )
-  } else {
-    debug(chalk.red('Failed'))
-  }
-
-  return result
-}
-
 export async function add(url: string) {
   const job = new Job('console', 'add', url)
-  let item
+
+  let total = 0
+  let processed = 0
+  let failed = 0
 
   try {
-    item = await getEventInfo(url)
+    total++
+    const result = await parse(url)
+
+    for (const item of result.items) {
+      const event = new Event(item)
+      await event.update(item)
+    }
+
+    processed++
+
+    if (result.count) {
+      job.addProvider({ id: result.items[0].source, urls: [url] })
+    }
   } catch (e) {
-    item = item || {}
-    item.error = (e as any)?.message
+    job.data.error = (e as any)?.message
+
+    job.log(chalk.red(`Error: ${job.data.error}`))
+
+    failed++
   }
 
-  const event = new Event(item)
-  await event.update(item)
-
-  await job.finish('finished', 1, 1, 0)
+  await job.finish('finished', total, processed, failed)
 }
 
 export async function pull(provider: Provider) {
@@ -103,7 +62,7 @@ export async function pull(provider: Provider) {
     await job.progress({ total: totalUrls, processed: processedUrls, url })
 
     try {
-      const result = await getEventList(url)
+      const result = await parse(url, 'list')
       total += result.count
       processedUrls++
 
@@ -170,7 +129,7 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
       url = `https://facebook.com/events/${event.id}`
     }
 
-    const sourceEvent = new Event(event, 'sourceEvent')
+    const sourceEvent = new Event(event, 'source')
 
     job.progress({ total, processed, name: event.name, url })
 
@@ -179,25 +138,24 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
         throw new Error('No url')
       }
 
-      const result = await getEventInfo(url)
+      const result = await parse(url, 'item')
 
-      if (!result) {
-        throw new Error('No result')
-      }
+      for (const item of result.items) {
+        const richEvent = new Event(item, item.parser)
 
-      const richEvent = new Event(result, 'richEvent')
-      await richEvent.update({
-        ...result,
-        ...providerInfo,
-        processed: true,
-        processedAt: new Date(),
-      })
-
-      if (richEvent.data.source !== sourceEvent.data.source) {
-        await sourceEvent.update({
+        await richEvent.update({
+          ...item,
+          ...providerInfo,
           processed: true,
           processedAt: new Date(),
         })
+
+        if (richEvent.data.source !== sourceEvent.data.source) {
+          await sourceEvent.update({
+            processed: true,
+            processedAt: new Date(),
+          })
+        }
       }
     } catch (e) {
       const error = (e as any)?.message
@@ -214,7 +172,6 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
     }
 
     processed++
-    job.progress({ total, processed })
   }
 
   await job.finish('finished', total, processed, failed)

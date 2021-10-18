@@ -127,7 +127,7 @@ export async function getPageNodes(options: NodeOptions) {
 const mapProvider = (parser: string) => {
   return (item: any) => {
     let facebook = null
-    let organiserFacebook = null
+    let organiserFacebook = item.organiserFacebook
 
     const id = item.id || getUrlContentId(item.url)
     const source = item.source || getUrlProvider(item.url)
@@ -175,10 +175,11 @@ async function getPlugins(
 
   for (const currentPlugin of plugins) {
     if (
-      (currentPlugin.contentType &&
-        contentType.includes(currentPlugin.contentType)) ||
-      (currentPlugin.patterns &&
-        currentPlugin.patterns.some((pattern) => url.includes(pattern)))
+      currentPlugin.contentType &&
+      contentType.includes(currentPlugin.contentType) &&
+      (currentPlugin.patterns
+        ? currentPlugin.patterns.some((pattern) => url.includes(pattern))
+        : true)
     ) {
       result.push(currentPlugin)
     }
@@ -210,6 +211,7 @@ type ParseMode = 'mixed' | 'list' | 'item'
 export async function parse(url: string, mode: ParseMode = 'mixed') {
   let allItems = []
   let scrapers = []
+  let errors = []
 
   const res = await axios.head(url)
 
@@ -225,13 +227,17 @@ export async function parse(url: string, mode: ParseMode = 'mixed') {
         items = items.map(mapProvider(plugin.name))
       } catch (e) {
         items = []
+        errors.push({
+          plugin: plugin.name,
+          error: (e as any)?.message,
+        })
       }
     }
     if (mode !== 'list' && plugin.getItem) {
       let item
 
       try {
-        await plugin.getItem(url)
+        item = await plugin.getItem(url)
 
         if (item?.startDate) {
           item = mapProvider(plugin.name)(item)
@@ -240,6 +246,11 @@ export async function parse(url: string, mode: ParseMode = 'mixed') {
         }
       } catch (e) {
         items = []
+
+        errors.push({
+          plugin: plugin.name,
+          error: (e as any)?.message,
+        })
       }
     }
 
@@ -252,7 +263,13 @@ export async function parse(url: string, mode: ParseMode = 'mixed') {
   }
 
   if (!allItems.length) {
-    throw new Error(`No result with ${scrapers.join(', ')}`)
+    let errorLine = ''
+
+    for (const e of errors) {
+      errorLine += `${e.plugin}: ${e.error}\n`
+    }
+
+    throw new Error(`No result with ${scrapers.join(', ')}\n${errorLine}`)
   }
 
   const result = {} as any

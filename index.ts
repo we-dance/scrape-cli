@@ -8,8 +8,10 @@ import { finish } from './src/puppeteer/browser'
 import { add, sync, pull } from './lib'
 import { Provider } from './src/entity/provider'
 
-require('yargs')
-  .boolean('verbose')
+const argv = require('yargs')
+  .boolean('v')
+  .boolean('vv')
+  .boolean('vvv')
   .boolean('force')
   .boolean('retry')
   .command(
@@ -17,8 +19,6 @@ require('yargs')
     'Sync events information',
     () => {},
     async (args: any) => {
-      config.verbose = args.verbose
-
       let providers: any[] = []
 
       if (args.provider) {
@@ -40,8 +40,6 @@ require('yargs')
     'Get list of events',
     () => {},
     async (args: any) => {
-      config.verbose = args.verbose
-
       const providers = readFiles(`${config.eventsDatabase}/providers`)
       let filteredProviders = providers
 
@@ -62,8 +60,6 @@ require('yargs')
     'Add url',
     () => {},
     async (args: any) => {
-      config.verbose = args.verbose
-
       await add(args.url)
 
       await finish()
@@ -117,3 +113,7 @@ require('yargs')
   .help()
   .alias('help', 'h')
   .strictCommands().argv
+
+config.vvv = argv.vvv
+config.vv = argv.vv || config.vvv
+config.v = argv.v || config.vv

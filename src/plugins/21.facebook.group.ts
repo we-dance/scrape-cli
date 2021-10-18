@@ -4,6 +4,7 @@ import { getUrlContentId } from '../utils/url'
 
 export const plugin: ScraperPlugin = {
   name: 'facebook.group',
+  contentType: 'text/html',
   patterns: ['facebook.com/groups'],
   getList: async (url: string): Promise<any[]> => {
     const groupId = getUrlContentId(url)

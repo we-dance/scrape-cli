@@ -140,7 +140,10 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
 
       const result = await parse(url, 'item')
 
+      let lastItem = null
+
       for (const item of result.items) {
+        lastItem = item
         const richEvent = new Event(item, item.parser)
 
         await richEvent.update({
@@ -149,13 +152,13 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
           processed: true,
           processedAt: new Date(),
         })
+      }
 
-        if (richEvent.data.source !== sourceEvent.data.source) {
-          await sourceEvent.update({
-            processed: true,
-            processedAt: new Date(),
-          })
-        }
+      if (event.source !== lastItem?.source) {
+        await sourceEvent.update({
+          processed: true,
+          processedAt: new Date(),
+        })
       }
     } catch (e) {
       const error = (e as any)?.message

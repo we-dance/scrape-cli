@@ -2,7 +2,7 @@ import { getPage } from '../puppeteer/browser'
 import { getPageNodes, ScraperPlugin } from '../scraper'
 
 export const plugin: ScraperPlugin = {
-  default: true,
+  contentType: 'text/html',
   name: 'schema.meta',
   getList: async (url: string): Promise<any[]> => {
     const page = await getPage(url)

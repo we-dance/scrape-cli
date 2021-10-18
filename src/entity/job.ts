@@ -68,10 +68,9 @@ export class Job extends Entity {
       urls: [],
       logs: [],
     }
-    this.id = this.data.id.toString()
 
     this.database = new FileDatabaseDriver(
-      `${config.eventsDatabase}/jobs/${this.id}.yml`
+      `${config.eventsDatabase}/jobs/${this.data.id}.yml`
     )
 
     this.uri = () => `${this.data.id}`
@@ -82,7 +81,7 @@ export class Job extends Entity {
       this.data.urls?.push(url)
     }
 
-    if (!config.verbose) {
+    if (!config.v) {
       progress = multibar.create(0, 0, {
         title: `${action} ${provider}`,
       })
@@ -93,19 +92,19 @@ export class Job extends Entity {
   }
 
   addOrganiser(data: any) {
-    if (!this.organisers.find((i) => data.id)) {
+    if (!this.organisers.find((i) => i.id === data.id)) {
       this.organisers.push(data)
     }
   }
 
   addProvider(data: any) {
-    if (!this.providers.find((i) => data.id)) {
+    if (!this.providers.find((i) => i.id === data.id)) {
       this.providers.push(data)
     }
   }
 
   log(...args: any[]) {
-    if (config.verbose) {
+    if (config.v) {
       console.log(...args)
     }
 
@@ -127,7 +126,7 @@ export class Job extends Entity {
       progress.update(processed, { name })
     }
 
-    if (config.verbose) {
+    if (config.v) {
       this.log()
       this.log(
         chalk.green(this.data.action),

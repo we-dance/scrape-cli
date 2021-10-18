@@ -3,6 +3,7 @@ import { getPageNodes, ScraperPlugin } from '../scraper'
 
 export const plugin: ScraperPlugin = {
   name: 'latindancecalendar',
+  contentType: 'text/html',
   patterns: ['latindancecalendar.com'],
   getList: async (url: string): Promise<any[]> => {
     const page = await getPage(url)

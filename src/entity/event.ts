@@ -54,11 +54,11 @@ export class Event extends Entity {
 
       if (this.changed) {
         this.data.history = this.data.history || []
-        this.data.history.push(currentJob.id)
-        this.data.updatedByJob = currentJob.id
+        this.data.history.push(currentJob.data.id)
+        this.data.updatedByJob = currentJob.data.id
 
         if (!this.exists) {
-          this.data.createdByJob = currentJob.id
+          this.data.createdByJob = currentJob.data.id
         }
       }
     }

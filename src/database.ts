@@ -4,6 +4,7 @@ import { Audit } from 'entity-diff'
 import { readFile } from './utils/filesystem'
 import save from './exporters/yaml'
 import { debug } from '../lib'
+import config from '../config'
 
 const audit = new Audit()
 
@@ -144,10 +145,17 @@ export class Entity {
 
       if (this.exists) {
         const changes = this.diff.map((field: any) => field.key)
+
         debug(
           chalk.blue(`U ${this.name} ${this.uri()}`),
           chalk.yellow(changes.join(', '))
         )
+
+        if (config.vvv) {
+          for (const change of this.diff) {
+            debug(chalk.gray(`${change.key}: ${change.from} -> ${change.to}`))
+          }
+        }
       } else {
         debug(chalk.green(`A ${this.name} ${this.uri()}`))
       }

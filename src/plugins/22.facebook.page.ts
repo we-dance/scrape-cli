@@ -4,6 +4,7 @@ import { getUrlContentId } from '../utils/url'
 
 export const plugin: ScraperPlugin = {
   name: 'facebook.page',
+  contentType: 'text/html',
   patterns: ['facebook.com'],
   getList: async (url: string): Promise<any[]> => {
     const pageId = getUrlContentId(url)

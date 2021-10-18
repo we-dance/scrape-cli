@@ -2,6 +2,7 @@ import { getPageNodes, ScraperPlugin } from '../scraper'
 
 export const plugin: ScraperPlugin = {
   name: 'facebook.event',
+  contentType: 'text/html',
   patterns: ['facebook.com/events/', 'fb.me/e/', 'fb.com/events'],
   getItem: async (url: string) => {
     let result = await getPageNodes({

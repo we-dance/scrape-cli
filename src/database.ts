@@ -3,8 +3,8 @@ import * as _ from 'lodash'
 import { Audit } from 'entity-diff'
 import { readFile } from './utils/filesystem'
 import save from './exporters/yaml'
-import { debug } from '../lib'
-import config from '../config'
+import { debug } from './lib'
+import config from './config'
 
 const audit = new Audit()
 

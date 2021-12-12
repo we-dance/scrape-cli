@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import * as _progress from 'cli-progress'
-import { getDirs, readFiles } from './src/utils/filesystem'
-import save from './src/exporters/yaml'
+import { getDirs, readFiles } from './utils/filesystem'
+import save from './exporters/yaml'
 import config from './config'
-import { getDocuments } from './src/firebase/database'
-import { finish } from './src/puppeteer/browser'
+import { getDocuments } from './firebase/database'
+import { finish } from './puppeteer/browser'
 import { add, sync, pull } from './lib'
-import { Provider } from './src/entity/provider'
+import { Provider } from './entity/provider'
 
 require('yargs')
   .count('verbose')
@@ -19,6 +19,8 @@ require('yargs')
     () => {},
     async (args: any) => {
       config.verbose = args.verbose
+      config.force = args.force
+      config.retry = args.retry
 
       let providers: any[] = []
 
@@ -30,7 +32,7 @@ require('yargs')
 
       for (const id of providers) {
         const provider = new Provider({ id })
-        await sync(provider, args.force, args.retry)
+        await sync(provider)
       }
 
       await finish()
@@ -65,7 +67,7 @@ require('yargs')
     async (args: any) => {
       config.verbose = args.verbose
 
-      await add(args.url, args.name)
+      await add(args.url, args.name, 'console')
 
       await finish()
     }

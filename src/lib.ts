@@ -1,11 +1,11 @@
 import * as _ from 'lodash'
 import * as chalk from 'chalk'
 import config from './config'
-import { readFiles } from './src/utils/filesystem'
-import { parse } from './src/scraper'
-import { Event } from './src/entity/event'
-import { Job, currentJob } from './src/entity/job'
-import { Provider } from './src/entity/provider'
+import { readFiles } from './utils/filesystem'
+import { parse } from './scraper'
+import { Event } from './entity/event'
+import { Job, currentJob } from './entity/job'
+import { Provider } from './entity/provider'
 
 export function debug(...args: any[]) {
   if (currentJob) {
@@ -13,8 +13,8 @@ export function debug(...args: any[]) {
   }
 }
 
-export async function add(url: string, name?: string) {
-  const job = new Job('console', 'add', url)
+export async function add(url: string, name: string, source: string) {
+  const job = new Job(source, 'add', url)
 
   let total = 0
   let processed = 0
@@ -90,7 +90,7 @@ export async function pull(provider: Provider) {
   })
 }
 
-export async function sync(provider: Provider, force: boolean, retry: boolean) {
+export async function sync(provider: Provider) {
   if (!provider.id) {
     throw new Error('Provider: not specified')
   }
@@ -100,14 +100,14 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
     `${config.eventsDatabase}/events/${provider.id}`
   )
 
-  let filteredEvents = events.filter((e: any) => e.failed === retry)
+  let filteredEvents = events.filter((e: any) => e.failed === config.retry)
 
-  if (!force) {
+  if (!config.force) {
     filteredEvents = filteredEvents.filter((e: any) => !e.processed)
   }
 
   filteredEvents = events.filter(
-    (e: any) => e.processed === force && e.failed === retry
+    (e: any) => e.processed === config.force && e.failed === config.retry
   )
 
   let processed = 0
@@ -115,9 +115,7 @@ export async function sync(provider: Provider, force: boolean, retry: boolean) {
   let total = filteredEvents.length
 
   job.log(
-    `Processing ${total} of ${
-      events.length
-    } (force: ${!!force}, retry: ${!!retry})`
+    `Processing ${total} of ${events.length} (force: ${config.force}, retry: ${config.retry})`
   )
 
   for (const event of filteredEvents) {

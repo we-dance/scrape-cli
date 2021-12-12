@@ -1,5 +1,5 @@
 import { Entity, FileDatabaseDriver } from '../database'
-import config from '../../config'
+import config from '../config'
 import { currentJob } from './job'
 
 export class Provider extends Entity {

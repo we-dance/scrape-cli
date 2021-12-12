@@ -3,8 +3,8 @@ import * as glob from 'glob'
 import { uniqBy } from 'lodash'
 import { getPage } from './puppeteer/browser'
 import { getUrlContentId, getUrlProvider, isFacebookEvent } from './utils/url'
-import config from '../config'
-import { debug } from '../lib'
+import config from './config'
+import { debug } from './lib'
 import chalk = require('chalk')
 
 interface NodeOptions {

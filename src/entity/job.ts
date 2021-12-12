@@ -2,7 +2,7 @@ import * as _progress from 'cli-progress'
 import * as chalk from 'chalk'
 import * as moment from 'moment'
 import { Entity, FileDatabaseDriver } from '../database'
-import config from '../../config'
+import config from '../config'
 import { Organiser } from './organiser'
 import { Provider } from './provider'
 

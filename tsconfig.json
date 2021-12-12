@@ -10,5 +10,5 @@
   },
   "compileOnSave": true,
   "exclude": ["dist"],
-  "include": ["src", "index.ts"]
+  "include": ["src"]
 }

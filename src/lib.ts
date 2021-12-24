@@ -42,7 +42,7 @@ export async function add(url: string, name: string, source: string) {
     failed++
   }
 
-  await job.finish('finished', total, processed, failed)
+  return await job.finish('finished', total, processed, failed)
 }
 
 export async function pull(provider: Provider) {

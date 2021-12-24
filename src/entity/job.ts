@@ -168,7 +168,7 @@ export class Job extends Entity {
       await provider.update(item)
     }
 
-    await this.save(this.data)
+    const result = await this.save(this.data)
 
     this.log()
     this.log(
@@ -180,5 +180,7 @@ export class Job extends Entity {
     if (this.data.failed) {
       this.log(chalk.red(`${this.data.failed} failed`))
     }
+
+    return result
   }
 }

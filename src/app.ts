@@ -4,21 +4,13 @@ import { add } from './lib'
 
 const app = express()
 
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 app.use(cors())
 
 app.post('/add', async (req: any, res: any) => {
-  try {
-    await add(req.url, req.name, 'form')
-
-    res.send({
-      success: true,
-    })
-  } catch (error) {
-    res.send({
-      success: false,
-      error,
-    })
-  }
+  const job = await add(req.body.url, req.body.name, 'api')
+  res.send(job?.data)
 })
 
 export default app

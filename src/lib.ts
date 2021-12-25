@@ -6,7 +6,7 @@ import { parse } from './scraper'
 import { Event } from './entity/event'
 import { Job, currentJob, finishJob } from './entity/job'
 import { Provider } from './entity/provider'
-import { getRepository } from './orm'
+import { getRepository } from './orm/orm'
 
 export function debug(...args: any[]) {
   if (currentJob) {

@@ -1,14 +1,21 @@
 import * as chalk from 'chalk'
 import * as _ from 'lodash'
-import { debug } from './lib'
 import { Audit } from 'entity-diff'
-import config from './config'
-import { readFile } from './utils/filesystem'
-import save from './exporters/yaml'
+import { debug } from '../lib'
+import config from '../config'
+import { FileRef } from './ref-file'
+import { SupabaseRef } from './ref-supabase'
+import { FirebaseRef } from './ref-firebase'
 
-export interface DatabaseDriver {
-  read(entity: any): any
-  write(entity: any): any
+export interface IQuery {
+  collection: string
+  id: string
+  value?: any
+}
+
+export interface IDocRef {
+  get(query: IQuery): any
+  set(query: IQuery): any
 }
 
 export interface BeforeUpdateHandler {
@@ -26,30 +33,8 @@ export interface EntityUri {
   (): string
 }
 
-export class FileDatabaseDriver implements DatabaseDriver {
-  path: string
-
-  constructor(path: string) {
-    if (!path) {
-      throw new Error('FileDatabaseDriver: path is not defined')
-    }
-
-    this.path = path
-  }
-
-  read() {
-    return readFile(this.path)
-  }
-
-  async write(entity: any) {
-    await save(this.path, entity)
-
-    return entity
-  }
-}
-
 export class Entity {
-  collection?: string
+  collection: string
   beforeUpdate?: BeforeUpdateHandler
   beforeDiff?: BeforeSaveHandler
   beforeSave?: BeforeSaveHandler
@@ -61,6 +46,7 @@ export class Entity {
   changed: boolean
 
   constructor(data?: any) {
+    this.collection = ''
     this.exists = false
     this.changed = false
     this.diff = []
@@ -70,16 +56,15 @@ export class Entity {
 
 const audit = new Audit()
 
-function getDatabase(query: any) {
-  let uri = `${query.collection}/${query.id}`
-
-  if (query.collection === 'events') {
-    uri = `${query.collection}/${query.source}/${query.id}`
+export function getDocRef(driver = config.databaseDriver) {
+  switch (driver) {
+    case 'supabase':
+      return new SupabaseRef()
+    case 'firebase':
+      return new FirebaseRef()
+    default:
+      return new FileRef()
   }
-
-  const documentPath = `${config.eventsDatabase}/${uri}.yml`
-
-  return new FileDatabaseDriver(documentPath)
 }
 
 class Repository {
@@ -100,11 +85,12 @@ class Repository {
       }
     }
 
+    query.id = `${query.id}`
+
     const entity = new this.TheEntity()
     query.collection = entity.collection
 
-    const database = getDatabase(query)
-    entity.data = await database.read()
+    entity.data = await getDocRef().get(query)
 
     if (entity.data) {
       entity.exists = true
@@ -138,10 +124,6 @@ class Repository {
 
   async save(entity: Entity) {
     const uri = `${entity.collection}/${entity.data.id}`
-    const database = getDatabase({
-      ...entity.data,
-      collection: entity.collection,
-    })
 
     if (entity.beforeDiff) {
       entity.beforeDiff()
@@ -165,7 +147,11 @@ class Repository {
         entity.data.createdAt = new Date()
       }
 
-      await database.write(entity.data)
+      await getDocRef().set({
+        collection: entity.collection,
+        id: `${entity.data.id}`,
+        value: entity.data,
+      })
 
       if (entity.exists) {
         const changes = entity.diff.map((field: any) => field.key)

@@ -1,4 +1,4 @@
-import { Entity } from '../orm'
+import { Entity } from '../orm/orm'
 import { currentJob } from './job'
 import { getCleanUrl, getUrlContentId } from '../utils/url'
 

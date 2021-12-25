@@ -1,11 +1,10 @@
 import * as _progress from 'cli-progress'
 import * as chalk from 'chalk'
 import * as moment from 'moment'
-import { Entity } from '../orm'
+import { Entity, getRepository } from '../orm/orm'
 import config from '../config'
 import { Organiser } from './organiser'
 import { Provider } from './provider'
-import { getRepository } from '../orm'
 
 export interface JobData {
   id: number
@@ -64,7 +63,7 @@ export class Job extends Entity {
     this.log()
     this.log(chalk.green(action), `from ${provider}`)
 
-    if (!config.verbose) {
+    if (!config.verbose && !config.silent) {
       const multibar = new _progress.MultiBar(
         {
           clearOnComplete: false,
@@ -160,11 +159,11 @@ export async function finishJob(
   currentJob.data.duration = `${minutes}m ${seconds}s`
 
   for (const item of currentJob.organisers) {
-    await getRepository(Organiser).update(item)
+    await getRepository(Organiser).update(item, item)
   }
 
   for (const item of currentJob.providers) {
-    await getRepository(Provider).update(item)
+    await getRepository(Provider).update(item, item)
   }
 
   currentJob.log()

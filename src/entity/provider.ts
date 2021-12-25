@@ -1,4 +1,4 @@
-import { Entity } from '../orm'
+import { Entity } from '../orm/orm'
 import { currentJob } from './job'
 
 export class Provider extends Entity {

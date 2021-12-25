@@ -1,69 +1,55 @@
-import { Entity, FileDatabaseDriver } from '../database'
-import config from '../config'
+import { Entity } from '../orm'
 import { currentJob } from './job'
 import { getCleanUrl, getUrlContentId } from '../utils/url'
 
 export class Event extends Entity {
-  label?: string
+  collection = 'events'
 
-  constructor(data: any, label?: string) {
-    super()
+  beforeUpdate = (before: any, after: any) => {
+    const result = after
 
-    this.data = data
-    this.label = label
-    this.id = data.id
-
-    this.name = 'event'
-
-    this.database = new FileDatabaseDriver(
-      `${config.eventsDatabase}/events/${this.data.source}/${this.data.id}.yml`
-    )
-
-    this.uri = () =>
-      `${this.data.source} ${this.data.id}` +
-      (this.label ? ` (${this.label})` : '')
-
-    this.beforeUpdate = (before: any, after: any) => {
-      const result = after
-
-      if (before?.image) {
-        delete result.image
-      }
-
-      return result
+    if (before?.image) {
+      delete result.image
     }
 
-    this.afterSave = async () => {
-      if (!currentJob) {
-        return
-      }
+    return result
+  }
 
-      if (this.data.organiserFacebook) {
-        currentJob.addOrganiser({
-          id: getUrlContentId(this.data.organiserFacebook),
-          facebook: getCleanUrl(this.data.organiserFacebook),
-          name: this.data.organiserName,
-          createdByEvent: this.data.id,
-          createdBySource: this.data.source,
-          country: this.data.location?.address?.addressCountry,
-          locality: this.data.location?.address?.addressLocality,
-        })
-      }
+  afterSave = async () => {
+    if (!currentJob) {
+      return
     }
 
-    this.beforeSave = () => {
-      if (!currentJob) {
-        return
-      }
+    if (this.data.organiserFacebook) {
+      currentJob.addOrganiser({
+        id: getUrlContentId(this.data.organiserFacebook),
+        facebook: getCleanUrl(this.data.organiserFacebook),
+        name: this.data.organiserName,
+        createdByEvent: this.data.id,
+        createdBySource: this.data.source,
+        country: this.data.location?.address?.addressCountry,
+        locality: this.data.location?.address?.addressLocality,
+      })
+    }
+  }
 
-      if (this.changed) {
-        this.data.history = this.data.history || []
-        this.data.history.push(currentJob.data.id)
-        this.data.updatedByJob = currentJob.data.id
+  beforeDiff = () => {
+    this.data.startDate = new Date(this.data.startDate)
+    this.data.endDate = new Date(this.data.endDate)
+  }
 
-        if (!this.exists) {
-          this.data.createdByJob = currentJob.data.id
-        }
+  beforeSave = () => {
+    if (!currentJob) {
+      return
+    }
+
+    if (this.changed) {
+      this.data.history = this.data.history || []
+      this.data.history.push(currentJob.data.id)
+      this.data.updatedByJob = currentJob.data.id
+
+      if (!this.exists) {
+        this.data.createdByJob = currentJob.data.id
       }
     }
   }

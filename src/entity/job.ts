@@ -1,10 +1,11 @@
 import * as _progress from 'cli-progress'
 import * as chalk from 'chalk'
 import * as moment from 'moment'
-import { Entity, FileDatabaseDriver } from '../database'
+import { Entity } from '../orm'
 import config from '../config'
 import { Organiser } from './organiser'
 import { Provider } from './provider'
+import { getRepository } from '../orm'
 
 export interface JobData {
   id: number
@@ -33,6 +34,8 @@ export let currentJob: any = null
 let progress: _progress.Bar | null = null
 
 export class Job extends Entity {
+  collection = 'jobs'
+
   data: JobData
   organisers: any[]
   providers: any[]
@@ -40,7 +43,6 @@ export class Job extends Entity {
   constructor(provider: string, action: string, url?: string) {
     super()
 
-    this.name = 'job'
     this.organisers = []
     this.providers = []
 
@@ -52,13 +54,6 @@ export class Job extends Entity {
       urls: [],
       logs: [],
     }
-    this.id = this.data.id.toString()
-
-    this.database = new FileDatabaseDriver(
-      `${config.eventsDatabase}/jobs/${this.data.id}.yml`
-    )
-
-    this.uri = () => `${this.data.id}`
 
     currentJob = this
 
@@ -134,53 +129,56 @@ export class Job extends Entity {
       url || ''
     )
   }
+}
 
-  async finish(
-    status: string,
-    total: number,
-    processed: number,
-    failed: number
-  ) {
-    if (progress) {
-      progress.setTotal(total)
-      progress.update(processed, { name: status })
-    }
-
-    this.data.finishedAt = new Date()
-    this.data.total = total
-    this.data.status = status
-    this.data.processed = processed
-    this.data.failed = failed
-
-    const time = this.data.finishedAt.getTime() - this.data.startedAt.getTime()
-    const seconds = moment.duration(time).seconds()
-    const minutes = moment.duration(time).minutes()
-
-    this.data.duration = `${minutes}m ${seconds}s`
-
-    for (const item of this.organisers) {
-      const organiser = new Organiser(item)
-      await organiser.update(item)
-    }
-
-    for (const item of this.providers) {
-      const provider = new Provider(item)
-      await provider.update(item)
-    }
-
-    const result = await this.save(this.data)
-
-    this.log()
-    this.log(
-      chalk.green(
-        `🎉 ${this.data.status} with ${this.data.total} items, ${this.organisers.length} organisers, ${this.providers.length} providers in ${this.data.duration}`
-      )
-    )
-
-    if (this.data.failed) {
-      this.log(chalk.red(`${this.data.failed} failed`))
-    }
-
-    return result
+export async function finishJob(
+  status: string,
+  total: number,
+  processed: number,
+  failed: number
+) {
+  if (!currentJob) {
+    throw new Error('No current job')
   }
+
+  if (progress) {
+    progress.setTotal(total)
+    progress.update(processed, { name: status })
+  }
+
+  currentJob.data.finishedAt = new Date()
+  currentJob.data.total = total
+  currentJob.data.status = status
+  currentJob.data.processed = processed
+  currentJob.data.failed = failed
+
+  const time =
+    currentJob.data.finishedAt.getTime() - currentJob.data.startedAt.getTime()
+  const seconds = moment.duration(time).seconds()
+  const minutes = moment.duration(time).minutes()
+
+  currentJob.data.duration = `${minutes}m ${seconds}s`
+
+  for (const item of currentJob.organisers) {
+    await getRepository(Organiser).update(item)
+  }
+
+  for (const item of currentJob.providers) {
+    await getRepository(Provider).update(item)
+  }
+
+  currentJob.log()
+  currentJob.log(
+    chalk.green(
+      `🎉 ${currentJob.data.status} with ${currentJob.data.total} items, ${currentJob.organisers.length} organisers, ${currentJob.providers.length} providers in ${currentJob.data.duration}`
+    )
+  )
+
+  if (currentJob.data.failed) {
+    currentJob.log(chalk.red(`${currentJob.data.failed} failed`))
+  }
+
+  const result = await getRepository(Job).save(currentJob)
+
+  return result
 }

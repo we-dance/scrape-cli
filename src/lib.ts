@@ -4,12 +4,15 @@ import config from './config'
 import { readFiles } from './utils/filesystem'
 import { parse } from './scraper'
 import { Event } from './entity/event'
-import { Job, currentJob } from './entity/job'
+import { Job, currentJob, finishJob } from './entity/job'
 import { Provider } from './entity/provider'
+import { getRepository } from './orm'
 
 export function debug(...args: any[]) {
   if (currentJob) {
     currentJob.log(...args)
+  } else {
+    console.log(...args)
   }
 }
 
@@ -25,8 +28,10 @@ export async function add(url: string, name: string, source: string) {
     const result = await parse(url)
 
     for (const item of result.items) {
-      const event = new Event(item)
-      await event.update(item)
+      await getRepository(Event).update(
+        { source: item.source, id: item.id },
+        item
+      )
     }
 
     processed++
@@ -42,11 +47,11 @@ export async function add(url: string, name: string, source: string) {
     failed++
   }
 
-  return await job.finish('finished', total, processed, failed)
+  return await finishJob('finished', total, processed, failed)
 }
 
 export async function pull(provider: Provider) {
-  if (!provider.id) {
+  if (!provider.data.id) {
     throw new Error('Provider: not specified')
   }
 
@@ -54,7 +59,7 @@ export async function pull(provider: Provider) {
     return
   }
 
-  const job = new Job(provider.id, 'pull')
+  const job = new Job(provider.data.id, 'pull')
 
   let total = 0
   let processed = 0
@@ -72,8 +77,7 @@ export async function pull(provider: Provider) {
       processedUrls++
 
       for (const item of result.items) {
-        const event = new Event(item)
-        await event.update(item)
+        await getRepository(Event).update(item)
       }
       processed++
     } catch (e) {
@@ -81,9 +85,9 @@ export async function pull(provider: Provider) {
     }
   }
 
-  await job.finish('finished', total, processed, failed)
+  await finishJob('finished', total, processed, failed)
 
-  await provider.update({
+  await getRepository(Provider).update(provider.data.id, {
     lastPullCount: job.data.total,
     lastPullDuration: job.data.duration,
     pulledAt: new Date(),
@@ -91,13 +95,13 @@ export async function pull(provider: Provider) {
 }
 
 export async function sync(provider: Provider) {
-  if (!provider.id) {
+  if (!provider.data.id) {
     throw new Error('Provider: not specified')
   }
-  const job = new Job(provider.id, 'sync')
+  const job = new Job(provider.data.id, 'sync')
 
   const events = await readFiles(
-    `${config.eventsDatabase}/events/${provider.id}`
+    `${config.eventsDatabase}/events/${provider.data.id}`
   )
 
   let filteredEvents = events.filter((e: any) => e.failed === config.retry)
@@ -132,7 +136,7 @@ export async function sync(provider: Provider) {
       url = `https://facebook.com/events/${event.id}`
     }
 
-    const sourceEvent = new Event(event, 'source')
+    const sourceEvent = new Event(event)
 
     job.progress({ total, processed, name: event.name, url })
 
@@ -147,9 +151,8 @@ export async function sync(provider: Provider) {
 
       for (const item of result.items) {
         lastItem = item
-        const richEvent = new Event(item, item.parser)
 
-        await richEvent.update({
+        await getRepository(Event).update(item, {
           ...item,
           ...providerInfo,
           processed: true,
@@ -158,7 +161,7 @@ export async function sync(provider: Provider) {
       }
 
       if (event.source !== lastItem?.source) {
-        await sourceEvent.update({
+        await getRepository(Event).update(sourceEvent, {
           processed: true,
           processedAt: new Date(),
         })
@@ -166,7 +169,7 @@ export async function sync(provider: Provider) {
     } catch (e) {
       const error = (e as any)?.message
 
-      await sourceEvent.update({
+      await getRepository(Event).update(sourceEvent, {
         failed: true,
         failedAt: new Date(),
         error,
@@ -180,8 +183,8 @@ export async function sync(provider: Provider) {
     processed++
   }
 
-  await job.finish('finished', total, processed, failed)
-  await provider.update({
+  await finishJob('finished', total, processed, failed)
+  await getRepository(Provider).update(provider.data.id, {
     lastSyncCount: job.data.total,
     lastSyncDuration: job.data.duration,
     syncedAt: new Date(),

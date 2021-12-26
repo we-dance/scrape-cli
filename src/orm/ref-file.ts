@@ -5,11 +5,7 @@ import config from '../config'
 
 export class FileRef implements IDocRef {
   getPath(query: any) {
-    let uri = `${query.collection}/${query.id}`
-
-    if (query.collection === 'events') {
-      uri = `${query.collection}/${query.source}/${query.id}`
-    }
+    const uri = `${query.collection}/${query.id}`
 
     return `${config.eventsDatabase}/${uri}.yml`
   }

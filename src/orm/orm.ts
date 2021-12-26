@@ -9,8 +9,11 @@ import { FirebaseRef } from './ref-firebase'
 
 export interface IQuery {
   collection: string
-  id: string
+  id?: string
   value?: any
+  where?: {
+    [key: string]: any
+  }
 }
 
 export interface IDocRef {
@@ -72,6 +75,28 @@ class Repository {
 
   constructor(TheEntity: typeof Entity) {
     this.TheEntity = TheEntity
+  }
+
+  async find(params: any): Promise<Entity[]> {
+    let result = []
+
+    const entity = new this.TheEntity()
+    params.collection = entity.collection
+
+    const docs = await getDocRef().get(params)
+
+    if (!docs) {
+      return []
+    }
+
+    for (const doc of docs) {
+      const event = new this.TheEntity(doc)
+      event.exists = true
+
+      result.push(event)
+    }
+
+    return result
   }
 
   async findOne(params: any): Promise<Entity> {

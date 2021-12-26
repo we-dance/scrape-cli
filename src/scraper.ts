@@ -132,8 +132,9 @@ const mapProvider = (parser: string) => {
     let facebook = null
     let organiserFacebook = item.organiserFacebook
 
-    const id = item.id || getUrlContentId(item.url)
     const source = item.source || getUrlProvider(item.url)
+    let id = item.id || getUrlContentId(item.url)
+    id = `${id}@${source}`
 
     if (item.hasOffers) {
       item.tickets = item.url

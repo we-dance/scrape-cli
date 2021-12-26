@@ -1,6 +1,9 @@
 import app from './app'
 import config from './config'
 
+config.silent = true
+config.verbose = 3
+
 const port = config.port
 
 app.listen(port, () => {

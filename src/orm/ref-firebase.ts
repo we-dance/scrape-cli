@@ -1,9 +1,10 @@
 import * as admin from 'firebase-admin'
+import { firestore } from 'firebase-admin'
 import { IDocRef, IQuery } from './orm'
 
 admin.initializeApp()
 
-const firestore = admin.firestore()
+const db = admin.firestore()
 
 function mapDoc(doc: any) {
   return {
@@ -14,15 +15,30 @@ function mapDoc(doc: any) {
 
 export class FirebaseRef implements IDocRef {
   async get(query: IQuery) {
-    const doc = await firestore.collection(query.collection).doc(query.id).get()
+    if (query.id) {
+      const doc = await db.collection(query.collection).doc(query.id).get()
 
-    return mapDoc(doc)
+      return mapDoc(doc)
+    }
+
+    if (query.where) {
+      let col: firestore.Query = db.collection(query.collection)
+
+      for (const key in query.where) {
+        col = col.where(key, '==', query.where[key])
+      }
+
+      const docsRef = await col.get()
+
+      return docsRef.docs.map(mapDoc)
+    }
   }
 
   async set(query: IQuery) {
-    return await firestore
-      .collection(query.collection)
-      .doc(query.id)
-      .set(query.value)
+    if (!query.id) {
+      throw new Error('ID is required')
+    }
+
+    return await db.collection(query.collection).doc(query.id).set(query.value)
   }
 }

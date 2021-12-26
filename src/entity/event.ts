@@ -33,11 +33,6 @@ export class Event extends Entity {
     }
   }
 
-  beforeDiff = () => {
-    this.data.startDate = new Date(this.data.startDate)
-    this.data.endDate = new Date(this.data.endDate)
-  }
-
   beforeSave = () => {
     if (!currentJob) {
       return

@@ -1,39 +1,25 @@
 #!/usr/bin/env node
 import * as _progress from 'cli-progress'
-import { getDirs, readFiles } from './utils/filesystem'
 import config from './config'
 import { finish } from './puppeteer/browser'
 import { add, sync, pull } from './lib'
 import { Provider } from './entity/provider'
+import { getRepository } from './orm/orm'
 
 require('yargs')
   .count('verbose')
   .alias('v', 'verbose')
-  .boolean('force')
   .boolean('silent')
-  .boolean('retry')
   .command(
     'sync [provider]',
     'Sync events information',
     () => {},
     async (args: any) => {
       config.verbose = args.verbose
-      config.force = args.force
-      config.retry = args.retry
       config.silent = args.silent
 
-      let providers: any[] = []
-
-      if (args.provider) {
-        providers = [args.provider]
-      } else {
-        providers = getDirs(`${config.eventsDatabase}/events`)
-      }
-
-      for (const id of providers) {
-        const provider = new Provider({ id })
-        await sync(provider)
-      }
+      const provider = await getRepository(Provider).findOne(args.provider)
+      await sync(provider)
 
       await finish()
     }
@@ -46,17 +32,8 @@ require('yargs')
       config.verbose = args.verbose
       config.silent = args.silent
 
-      const providers = readFiles(`${config.eventsDatabase}/providers`)
-      let filteredProviders = providers
-
-      if (args.provider) {
-        filteredProviders = providers.filter((p: any) => p.id === args.provider)
-      }
-
-      for (const item of filteredProviders) {
-        const provider = new Provider(item)
-        await pull(provider)
-      }
+      const provider = await getRepository(Provider).findOne(args.provider)
+      await pull(provider)
 
       await finish()
     }

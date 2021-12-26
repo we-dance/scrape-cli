@@ -1,7 +1,5 @@
 import * as _ from 'lodash'
 import * as chalk from 'chalk'
-import config from './config'
-import { readFiles } from './utils/filesystem'
 import { parse } from './scraper'
 import { Event } from './entity/event'
 import { Job, currentJob, finishJob } from './entity/job'
@@ -28,10 +26,7 @@ export async function add(url: string, name: string, source: string) {
     const result = await parse(url)
 
     for (const item of result.items) {
-      await getRepository(Event).update(
-        { source: item.source, id: item.id },
-        item
-      )
+      await getRepository(Event).update(item, item)
     }
 
     processed++
@@ -77,8 +72,9 @@ export async function pull(provider: Provider) {
       processedUrls++
 
       for (const item of result.items) {
-        await getRepository(Event).update(item)
+        await getRepository(Event).update(item.id, item)
       }
+
       processed++
     } catch (e) {
       failed++
@@ -98,31 +94,22 @@ export async function sync(provider: Provider) {
   if (!provider.data.id) {
     throw new Error('Provider: not specified')
   }
+
   const job = new Job(provider.data.id, 'sync')
 
-  const events = await readFiles(
-    `${config.eventsDatabase}/events/${provider.data.id}`
-  )
-
-  let filteredEvents = events.filter((e: any) => e.failed === config.retry)
-
-  if (!config.force) {
-    filteredEvents = filteredEvents.filter((e: any) => !e.processed)
-  }
-
-  filteredEvents = events.filter(
-    (e: any) => e.processed === config.force && e.failed === config.retry
-  )
+  const events = await getRepository(Event).find({
+    where: { source: provider.data.id },
+  })
 
   let processed = 0
   let failed = 0
-  let total = filteredEvents.length
+  let total = events.length
 
-  job.log(
-    `Processing ${total} of ${events.length} (force: ${config.force}, retry: ${config.retry})`
-  )
+  job.log(`Processing ${total} events`)
 
-  for (const event of filteredEvents) {
+  for (const eventEntity of events) {
+    const event = eventEntity.data
+
     event.source = event.source || event.provider
 
     const providerInfo = {
@@ -131,28 +118,29 @@ export async function sync(provider: Provider) {
       provider: event.source,
     }
 
-    let url = event.facebook || event.url || event.providerUrl
-    if (!url && event.source === 'facebook.com' && event.id) {
-      url = `https://facebook.com/events/${event.id}`
+    const sourceEvent = event
+
+    event.url = event.facebook || event.url || event.providerUrl
+    if (!event.url && event.source === 'facebook.com' && event.id) {
+      const facebookId = event.id.replace('@facebook.com', '')
+      event.url = `https://facebook.com/events/${facebookId}`
     }
 
-    const sourceEvent = new Event(event)
-
-    job.progress({ total, processed, name: event.name, url })
+    job.progress({ total, processed, name: event.name, url: event.url })
 
     try {
-      if (!url) {
+      if (!event.url) {
         throw new Error('No url')
       }
 
-      const result = await parse(url, 'item')
+      const result = await parse(event.url, 'item')
 
       let lastItem = null
 
       for (const item of result.items) {
         lastItem = item
 
-        await getRepository(Event).update(item, {
+        await getRepository(Event).update(item.id, {
           ...item,
           ...providerInfo,
           processed: true,
@@ -161,15 +149,17 @@ export async function sync(provider: Provider) {
       }
 
       if (event.source !== lastItem?.source) {
-        await getRepository(Event).update(sourceEvent, {
+        await getRepository(Event).update(sourceEvent.id, {
           processed: true,
           processedAt: new Date(),
+          redirected: true,
+          redirectedTo: lastItem.id,
         })
       }
     } catch (e) {
       const error = (e as any)?.message
 
-      await getRepository(Event).update(sourceEvent, {
+      await getRepository(Event).update(sourceEvent.id, {
         failed: true,
         failedAt: new Date(),
         error,

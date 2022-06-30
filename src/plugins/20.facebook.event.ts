@@ -31,22 +31,21 @@ export const plugin: ScraperPlugin = {
     const code = `[...document.querySelectorAll('div[role=main]')].map(node => ({
       name: node.querySelectorAll('h2')[0].textContent,
       date: node.querySelectorAll('h2')[0].parentElement.parentElement.firstChild.textContent,
-      description: node.querySelectorAll('h2')[1].parentElement.parentElement.parentElement.parentElement.childNodes[6].innerText,
+      description: [...node.querySelectorAll('h2')[1].parentElement.parentElement.parentElement.parentElement.childNodes].pop().innerText,
       image: node.querySelectorAll('img')[1].src,
-      organisers: [...node.querySelectorAll('[role=list]')[1].querySelectorAll('a')].map(a => a.href),
-      tickets: node.querySelector('[aria-label="Find Tickets"]').href
+      organisers: [...node.querySelectorAll('[role=list] a')].map(a => a.href),
+      tickets: node.querySelector('[aria-label="Find Tickets"]')?.href
     }))[0]`
 
     const raw = await page.evaluate(code)
 
-    const mobileUrl = url.replace(
-      'https://facebook.com',
-      'https://m.facebook.com'
-    )
-
     if (!raw.date) {
       throw new Error('Event date was not found')
     }
+
+    const mobileUrl = url
+      .replace('https://facebook.com', 'https://m.facebook.com')
+      .replace('https://www.facebook.com', 'https://m.facebook.com')
 
     const mobilePage = await getPage(mobileUrl)
 
@@ -117,9 +116,13 @@ export const plugin: ScraperPlugin = {
       }
     }
 
-    let tickets = decodeURIComponent(
-      raw.tickets.replace('https://l.facebook.com/l.php?u=', '')
-    )
+    let tickets
+
+    if (raw.tickets) {
+      tickets = decodeURIComponent(
+        raw.tickets.replace('https://l.facebook.com/l.php?u=', '')
+      )
+    }
 
     const result: EventSchema = {
       description,

@@ -184,7 +184,11 @@ class Repository {
         debug(chalk.blue(`U ${uri}`), chalk.yellow(changes.join(', ')))
 
         for (const change of entity.diff) {
-          debug(chalk.gray(`${change.key}: ${change.from} -> ${change.to}`))
+          if (change.from) {
+            debug(chalk.red(`- ${change.key}: ${change.from}`))
+          }
+
+          debug(chalk.green(`+ ${change.key}: ${change.to}`))
         }
       } else {
         debug(chalk.green(`A ${uri}`))

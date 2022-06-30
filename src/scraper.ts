@@ -251,6 +251,10 @@ export async function parse(url: string, mode: ParseMode = 'mixed') {
       try {
         item = await plugin.getItem(url)
 
+        if (config.verbose > 2) {
+          debug(item)
+        }
+
         if (item?.startDate) {
           item = mapProvider(plugin.name)(item)
 

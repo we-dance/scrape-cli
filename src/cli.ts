@@ -5,6 +5,7 @@ import { finish } from './puppeteer/browser'
 import { add, sync, pull } from './lib'
 import { Provider } from './entity/provider'
 import { getRepository } from './orm/orm'
+import { plugin as FacebookEventPlugin } from './plugins/20.facebook.event'
 
 require('yargs')
   .count('verbose')
@@ -48,6 +49,19 @@ require('yargs')
 
       await add(args.url, args.name, 'console')
 
+      await finish()
+    }
+  )
+  .command(
+    'fb <url>',
+    'Get facebook event',
+    () => {},
+    async (args: any) => {
+      if (!FacebookEventPlugin.getItem) {
+        return
+      }
+
+      await FacebookEventPlugin.getItem(args.url)
       await finish()
     }
   )

@@ -3,7 +3,8 @@ module.exports = {
     {
       spreadsheetId: '1HipCCapgfMJIqkLpckmkTXToJJd7cKSOjPFTNplkP3g',
       range: 'Events',
-      output: '../events-database/events/spreadsheet_festivals',
+      output: '../../Database/events/spreadsheet_festivals',
       format: 'yaml',
     },
+  ],
 }

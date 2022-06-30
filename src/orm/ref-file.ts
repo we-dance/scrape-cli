@@ -1,19 +1,31 @@
-import { readFile } from '../utils/filesystem'
+import { readFile, readFiles } from '../utils/filesystem'
 import { IDocRef, IQuery } from './orm'
 import save from '../exporters/yaml'
 import config from '../config'
 
 export class FileRef implements IDocRef {
   getPath(query: any) {
-    const uri = `${query.collection}/${query.id}`
+    if (query.id) {
+      const uri = `${query.collection}/${query.id}`
 
-    return `${config.eventsDatabase}/${uri}.yml`
+      return `${config.eventsDatabase}/${uri}.yml`
+    }
+
+    return `${config.eventsDatabase}/${query.collection}/`
   }
 
   get(query: IQuery) {
-    const path = this.getPath(query)
+    if (query.id) {
+      const path = this.getPath(query)
 
-    return readFile(path)
+      return readFile(path)
+    }
+
+    if (query.where) {
+      const path = this.getPath(query)
+
+      return readFiles(path)
+    }
   }
 
   async set(query: IQuery) {

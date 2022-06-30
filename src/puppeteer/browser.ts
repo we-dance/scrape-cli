@@ -6,6 +6,8 @@ import chalk = require('chalk')
 let browser: puppeteer.Browser | null
 let page: puppeteer.Page | null
 
+const pages: any = {}
+
 export async function getBrowser() {
   const headless = Boolean(process.env.HEADLESS)
 
@@ -30,25 +32,34 @@ export async function getBrowser() {
 }
 
 export async function getPage(url?: string) {
-  if (!page) {
+  if (!url) {
     const browser = await getBrowser()
     page = await browser.newPage()
-    await page.setViewport({ width: 1080, height: 1080 })
+    return page
   }
 
-  if (url) {
+  if (pages[url]) {
     if (config.verbose > 2) {
-      debug(chalk.gray(`[browser] opening ${url}`))
+      debug(chalk.gray(`[browser] using ${url}`))
     }
 
-    const response = await page.goto(url, { waitUntil: 'networkidle0' })
-
-    if (config.verbose > 2) {
-      debug(chalk.gray(`[browser] response: ${response.status()}`))
-    }
+    return pages[url]
   }
 
-  return page
+  const browser = await getBrowser()
+  pages[url] = await browser.newPage()
+
+  if (config.verbose > 2) {
+    debug(chalk.gray(`[browser] opening ${url}`))
+  }
+
+  const response = await pages[url].goto(url, { waitUntil: 'networkidle0' })
+
+  if (config.verbose > 2) {
+    debug(chalk.gray(`[browser] response: ${response.status()}`))
+  }
+
+  return pages[url]
 }
 
 export async function finish() {

@@ -44,7 +44,7 @@ export async function getPageNodes(options: NodeOptions) {
       return null
     }
 
-    let innerText = await page.evaluate((e) => e.innerText, element)
+    let innerText = await page.evaluate((e: any) => e.innerText, element)
 
     if (!filter) {
       return innerText
@@ -68,26 +68,26 @@ export async function getPageNodes(options: NodeOptions) {
       case 'json':
         return JSON.parse(innerText)
       case 'src':
-        return await page.evaluate((e) => e?.getAttribute('src'), element)
+        return await page.evaluate((e: any) => e?.getAttribute('src'), element)
       case 'bool':
         return !!innerText
       case 'content':
         return await page.evaluate(
-          (e) =>
+          (e: any) =>
             e.getAttribute('content') ??
             e.querySelector('[content]')?.getAttribute('content'),
           element
         )
       case 'title':
         return await page.evaluate(
-          (e) =>
+          (e: any) =>
             e.getAttribute('title') ??
             e.querySelector('[title]')?.getAttribute('title'),
           element
         )
       case 'href':
         return await page.evaluate(
-          (e) =>
+          (e: any) =>
             e.getAttribute('href') ??
             e.querySelector('[href]')?.getAttribute('href'),
           element

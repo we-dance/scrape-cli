@@ -61,7 +61,12 @@ require('yargs')
         return
       }
 
-      await FacebookEventPlugin.getItem(args.url)
+      config.verbose = args.verbose
+
+      const event = await FacebookEventPlugin.getItem(args.url)
+
+      console.log(event)
+
       await finish()
     }
   )

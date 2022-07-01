@@ -6,6 +6,7 @@ import config from '../config'
 import { FileRef } from './yml'
 import { SupabaseRef } from './supabase'
 import { FirebaseRef } from './firebase'
+import { SpreadsheetRef } from './spreadsheet'
 
 export interface IQuery {
   collection: string
@@ -61,6 +62,8 @@ const audit = new Audit()
 
 export function getDocRef(driver = config.databaseDriver) {
   switch (driver) {
+    case 'spreadsheet':
+      return new SpreadsheetRef()
     case 'supabase':
       return new SupabaseRef()
     case 'firebase':

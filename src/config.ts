@@ -10,6 +10,9 @@ const config = {
   databaseDriver: process.env.DATABASE_DRIVER || 'filesystem',
   supabaseUrl: process.env.SUPABASE_URL || '',
   supabaseApiKey: process.env.SUPABASE_API_KEY || '',
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  googleSpreadsheetId: process.env.GOOGLE_SPREADSHEET_ID || '',
 }
 
 export default config

@@ -24,6 +24,8 @@ export class FileRef implements IDocRef {
     if (query.where) {
       const path = this.getPath(query)
 
+      console.log('[orm] query.where is not supported yet')
+
       return readFiles(path)
     }
   }

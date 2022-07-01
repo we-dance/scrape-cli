@@ -3,9 +3,9 @@ import * as _ from 'lodash'
 import { Audit } from 'entity-diff'
 import { debug } from '../lib'
 import config from '../config'
-import { FileRef } from './ref-file'
-import { SupabaseRef } from './ref-supabase'
-import { FirebaseRef } from './ref-firebase'
+import { FileRef } from './yml'
+import { SupabaseRef } from './supabase'
+import { FirebaseRef } from './firebase'
 
 export interface IQuery {
   collection: string

@@ -76,11 +76,7 @@ export async function set(spreadsheetId: string, range: string, rows: any) {
 
     values.push(
       Object.values(row).map((val) => {
-        if (Array.isArray(val)) {
-          return val.join('\n')
-        }
-
-        if (typeof val === 'object') {
+        if (Array.isArray(val) || typeof val === 'object') {
           return JSON.stringify(val)
         }
 
@@ -131,7 +127,13 @@ export async function get(spreadsheetId: string, range: string) {
     const item = {} as any
 
     for (let position = 0; position < headers.length; position++) {
-      item[headers[position]] = row[position]
+      let val = row[position]
+
+      if (val && ['[', '{'].includes(val[0])) {
+        val = JSON.parse(val)
+      }
+
+      item[headers[position]] = val
     }
 
     items.push(item)

@@ -19,8 +19,7 @@ require('yargs')
       config.verbose = args.verbose
       config.silent = args.silent
 
-      const provider = await getRepository(Provider).findOne(args.provider)
-      await sync(provider)
+      await sync(args.provider)
 
       await finish()
     }

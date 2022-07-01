@@ -40,6 +40,7 @@ export class Event extends Entity {
 
     if (this.changed) {
       this.data.history = this.data.history || []
+
       this.data.history.push(currentJob.data.id)
       this.data.updatedByJob = currentJob.data.id
 

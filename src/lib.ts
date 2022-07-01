@@ -90,16 +90,24 @@ export async function pull(provider: Provider) {
   })
 }
 
-export async function sync(provider: Provider) {
-  if (!provider.data.id) {
-    throw new Error('Provider: not specified')
+export async function sync(providerName?: string) {
+  let provider
+
+  if (providerName) {
+    provider = await getRepository(Provider).findOne(providerName)
   }
 
-  const job = new Job(provider.data.id, 'sync')
+  const job = new Job(provider?.data?.id || 'all', 'sync')
 
-  const events = await getRepository(Event).find({
-    where: { source: provider.data.id },
-  })
+  let searchOptions
+
+  if (provider?.data?.id) {
+    searchOptions = {
+      where: { source: provider?.data?.id },
+    }
+  }
+
+  const events = await getRepository(Event).find(searchOptions)
 
   let processed = 0
   let failed = 0

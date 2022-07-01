@@ -80,10 +80,15 @@ class Repository {
     this.TheEntity = TheEntity
   }
 
-  async find(params: any): Promise<Entity[]> {
+  async find(params?: any): Promise<Entity[]> {
     let result = []
 
+    if (!params) {
+      params = {}
+    }
+
     const entity = new this.TheEntity()
+
     params.collection = entity.collection
 
     const docs = await getDocRef().get(params)

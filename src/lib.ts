@@ -32,7 +32,9 @@ export async function add(url: string, name: string, source: string) {
     processed++
 
     if (result.count) {
-      job.addProvider({ name, id: result.items[0].source, urls: [url] })
+      if (result.items[0].source !== 'facebook.com') {
+        job.addProvider({ name, id: result.items[0].source, urls: [url] })
+      }
     }
   } catch (e) {
     job.data.error = (e as any)?.message

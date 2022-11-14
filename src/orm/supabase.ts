@@ -2,9 +2,13 @@ import { createClient } from '@supabase/supabase-js'
 import { IDocRef, IQuery } from './orm'
 import config from '../config'
 
-const supabase = createClient(config.supabaseUrl, config.supabaseApiKey)
+let supabase: any
 
 export class SupabaseRef implements IDocRef {
+  constructor() {
+    supabase = createClient(config.supabaseUrl, config.supabaseApiKey)
+  }
+
   async get(query: IQuery) {
     const { data } = await supabase
       .from(query.collection)

@@ -3,9 +3,10 @@
 
 ## Setup
 
-Run `yarn install`
-
-Create `.env` file with
+1. [Install nvm](https://github.com/nvm-sh/nvm)
+2. Run `nvm use`
+3. Run `yarn install`
+4. Create `.env` file with
 
 ```
 HEADLESS=true

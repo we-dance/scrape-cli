@@ -17,7 +17,7 @@ export async function getBrowser() {
     }
 
     browser = await puppeteer.launch({
-      executablePath: '/opt/homebrew/bin/chromium',
+      executablePath: 'chromium',
       headless,
       args: [
         '--no-sandbox',

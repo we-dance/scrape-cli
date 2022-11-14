@@ -3,7 +3,7 @@
 
 ## Setup
 
-1. Run `yarn install`
+Run `yarn install`
 
 Create `.env` file with
 

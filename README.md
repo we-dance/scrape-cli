@@ -1,10 +1,11 @@
 # scrape-cli
+
 > Import and tag events from websites: Schema Rich Snippets, Facebook, iCal
 
 ## Setup
 
 1. [Install nvm](https://github.com/nvm-sh/nvm)
-2. Run `nvm use`
+2. Run `nvm use <node version inside .nvmrc>`
 3. Run `yarn install`
 4. Create `.env` file with
 

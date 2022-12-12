@@ -24,6 +24,6 @@ Run `yarn cli add <url>` where url is a link to a facebook event it will create 
 
 ## Troubleshooting
 
-If you face problem in windows for puppeteer executable path, then put the path of chrome.exe in puppeteer inside node_modules.
+If you face problem in windows for puppeteer executable path like `Error: Failed to launch the browser process!`, then put the path of chrome.exe in puppeteer inside node_modules to make sure chrome in the path.
 
-for example: ./node_modules/puppeteer/.local-chromium/win64-848005/chrome-win/chrome.exe
+`for example: ./node_modules/puppeteer/.local-chromium/win64-848005/chrome-win/chrome.exe`

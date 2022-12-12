@@ -17,7 +17,8 @@ export async function getBrowser() {
     }
 
     browser = await puppeteer.launch({
-      executablePath: 'chromium',
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      ignoreDefaultArgs: ['--disable-extensions'],
       headless,
       args: [
         '--no-sandbox',

@@ -1,4 +1,5 @@
 # scrape-cli
+
 > Import and tag events from websites: Schema Rich Snippets, Facebook, iCal
 
 ## Setup
@@ -12,6 +13,9 @@
 HEADLESS=true
 APP_EVENTS_DATABASE=../path-to-folder/events-database
 NODE_TLS_REJECT_UNAUTHORIZED=0
+PUPPETEER_EXECUTABLE_PATH=chromium
+if you face problem in windows for puppeteer executable path, then put the path of chrome.exe in puppeteer inside node_modules.
+For Example: ./node_modules/puppeteer/.local-chromium/win64-848005/chrome-win/chrome.exe
 ```
 
 ## Usage

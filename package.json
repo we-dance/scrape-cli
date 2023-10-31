@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^1.29.1",
-    "axios": "^0.21.1",
+    "axios": "1.6.0",
     "chalk": "^4.1.2",
     "cli-progress": "^3.9.1",
     "cors": "^2.8.5",
@@ -20,6 +20,7 @@
     "dotenv": "^8.2.0",
     "entity-diff": "^1.0.6",
     "express": "^4.17.1",
+    "facebook-event-scraper": "^0.0.13",
     "firebase-admin": "^10.0.0",
     "fs": "^0.0.1-security",
     "glob": "^7.2.0",
@@ -45,14 +46,14 @@
     "@types/express": "^4.17.13",
     "@types/glob": "^7.1.4",
     "@types/ical": "^0.8.0",
-    "@types/lodash": "^4.14.168",
+    "@types/lodash": "^4.14.200",
     "@types/mkdirp": "^1.0.1",
     "@types/progress": "^2.0.3",
     "@types/puppeteer": "^5.4.2",
     "@types/yargs": "^16.0.1",
     "rimraf": "^3.0.2",
     "tslint": "^5.12.0",
-    "typescript": "^3.2.2"
+    "typescript": "^5.2.2"
   },
   "private": true
 }

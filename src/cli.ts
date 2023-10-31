@@ -7,6 +7,7 @@ import { Provider } from './entity/provider'
 import { getRepository } from './orm/orm'
 import { plugin as FacebookEventPlugin } from './plugins/20.facebook.event'
 import { plugin as SchemaEventPlugin } from './plugins/10.schema.meta'
+import { scrapeFbEvent } from 'facebook-event-scraper'
 
 require('yargs')
   .count('verbose')
@@ -68,6 +69,15 @@ require('yargs')
       console.log(event)
 
       await finish()
+    }
+  )
+  .command(
+    'fb <url>',
+    'facebook-event-scraper',
+    () => {},
+    async (args: any) => {
+      const eventData = await scrapeFbEvent(args.url)
+      console.log(eventData)
     }
   )
   .command(

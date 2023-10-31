@@ -53,6 +53,10 @@ export const plugin: ScraperPlugin = {
       `Array.prototype.slice.call(document.querySelectorAll('a[href]')).map(a => a.href).find(href => href.includes('here.com'))`
     )
 
+    if (!addressUrl) {
+      throw new Error('Event address was not found')
+    }
+
     addressUrl = addressUrl.replace('https://lm.facebook.com/l.php?u=', '')
     addressUrl = decodeURIComponent(addressUrl)
     addressUrl = addressUrl.split('?')[0]

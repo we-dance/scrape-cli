@@ -10,6 +10,6 @@
     "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
   },
   "compileOnSave": true,
-  "exclude": ["dist"],
+  "exclude": ["dist", "node_modules"],
   "include": ["src"]
 }
